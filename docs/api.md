@@ -1,6 +1,7 @@
 # HTTP API
 
-**Status: specification. Only `GET /health` exists** — see the capability table in the README.
+**Status: the authentication, custody and audit endpoints below are built. Administration,
+alarms and CSV export are not** — see the capability table in the README.
 
 The server is the authoritative boundary. Everything the desktop client can do, it does
 through this surface, and every rule is enforced here rather than in the client.
@@ -54,6 +55,8 @@ and timing as an unknown account — enumerating valid holders should not be fre
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
+Not built yet.
+
 | `GET` `POST` | `/api/users` | List and create holders |
 | `PATCH` | `/api/users/{id}` | Amend a holder |
 | `GET` `POST` | `/api/assets` | List and create assets |
@@ -63,7 +66,7 @@ and timing as an unknown account — enumerating valid holders should not be fre
 
 ## Live events
 
-`/hubs/events` (SignalR). A connection is authorized like any request and receives only what
+Not built yet. `/hubs/events` (SignalR). A connection is authorized like any request and receives only what
 its holder may see.
 
 | Event | Payload |

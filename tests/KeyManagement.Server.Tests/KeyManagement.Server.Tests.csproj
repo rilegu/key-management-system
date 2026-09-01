@@ -1,7 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The Web SDK, not the plain one: WebApplicationFactory needs the ASP.NET Core framework
+       reference to host the real server in-process. The xUnit harness comes from
+       tests/Directory.Build.props. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\KeyManagement.Server\KeyManagement.Server.csproj" />
+    <ProjectReference Include="..\..\src\KeyManagement.Infrastructure\KeyManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\KeyManagement.Contracts\KeyManagement.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
