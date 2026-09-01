@@ -1,0 +1,15 @@
+# Normalise line endings.
+#
+# core.autocrlf gives the working tree CRLF on Windows while git stores LF. That is mostly
+# harmless until a check reads the working tree rather than the index: .editorconfig declares
+# LF, so on a platform that checks out CRLF, `dotnet format --verify-no-changes` fails on a
+# fresh clone nobody has edited. Forcing LF in the working tree makes local checks and CI
+# agree on every platform.
+
+* text=auto eol=lf
+
+# Binary, never translated.
+*.ico binary
+*.png binary
+*.jpg binary
+*.pdf binary
