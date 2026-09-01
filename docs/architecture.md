@@ -57,14 +57,21 @@ authorize raises an alarm rather than updating custody silently.
 **Server to database.** The database is the system of record. Custody state and its audit
 record change in one transaction, so the trail cannot disagree with the state it describes.
 
-Four SQLite settings are load-bearing, and three of them are easy to lose:
+Four SQLite settings are load-bearing, and none of them is the default:
 
 - **WAL journal mode**, so readers proceed while the gateway or the API writes.
 - **`PRAGMA foreign_keys=ON` on every connection.** SQLite ignores foreign keys unless asked,
-  per connection — the default is silent, so this is cheap to drop and expensive to notice.
+  per connection — silently, with no error — so a schema full of correct declarations enforces
+  nothing without it. Applied by a connection interceptor, because pooling hands out fresh
+  handles.
 - **`busy_timeout` with retry.** SQLite takes one writer at a time; a concurrent write should
   wait rather than fail.
-- **UTC timestamps**, converted only at the UI boundary.
+- **Timestamps stored as fixed-width UTC ISO-8601 text**, not the provider's own
+  `DateTimeOffset` mapping. That mapping keeps each value's original offset, so text order and
+  chronological order diverge and EF refuses `ORDER BY` on such a column outright rather than
+  answering wrongly. Reading the audit trail newest-first, sweeping for overdue items and
+  listing an asset's history all order by time, so without this the indexes on those columns
+  would be unusable.
 
 ## Data flow: a checkout
 
@@ -81,6 +88,44 @@ CheckoutView → CheckoutViewModel → IKeyManagementClient
 
 The command is authorized and recorded before the cabinet is asked to do anything, and the
 cabinet's report is reconciled against what was authorized. A denial never reaches the device.
+
+## Domain model
+
+Two state machines, deliberately separate. The asset's answers "where is it"; the checkout's
+answers "what became of that request". A refused request is a fact about the request — the
+asset it was refused stays exactly where it was, which is why `Denied` appears in one and not
+the other.
+
+```
+Asset      Available ─▶ CheckoutPending ─▶ CheckedOut ─▶ ReturnPending ─▶ Available
+                             │                               │
+                             └──▶ Available                  └──▶ CheckedOut
+           any state ◀──▶ Faulted / Unknown, settled by reconciliation
+
+Checkout   Pending ─▶ Active ─▶ Overdue ─▶ Returned
+              │          └──────────────▶ Returned
+              └──▶ Abandoned            Denied, Returned, Abandoned are terminal
+```
+
+`CustodyTransitions` holds both tables as data, and every entity method asks it before moving.
+Nothing outside the entity sets a state, so the machine is a rule rather than a diagram. A move
+to the state something is already in is not legal: device reports repeat, and treating a repeat
+as a transition would write an audit record for a change that never happened.
+
+| Entity | Holds |
+| ------ | ----- |
+| `User`, `Role` | Holders, and the permission sets granted through roles |
+| `AssetGroupMembership` | Which groups a holder may check out from |
+| `Asset`, `AssetGroup` | Items and the grouping authorization is granted over |
+| `Cabinet`, `Slot` | Cabinets, their positions, and the last state each reported |
+| `Checkout` | One request and everything that became of it |
+| `AuditEvent` | The append-only trail |
+| `DeviceEvent` | What a cabinet actually said, before interpretation |
+| `RefreshToken` | Revocable sessions, stored hashed |
+
+Identifiers are typed rather than bare GUIDs, so passing an `AssetId` where a `SlotId` belongs
+fails to compile instead of failing at the database. They are version 7 GUIDs: time-ordered, so
+inserts land at the end of an index rather than scattering across it.
 
 ## Reliability
 

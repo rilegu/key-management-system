@@ -92,3 +92,9 @@ dotnet_diagnostic.CA1062.severity = none
 [tests/**/*.cs]
 # Test classes are instantiated by xUnit and exist to be discovered, not designed.
 dotnet_diagnostic.CA1515.severity = none
+
+# EF Core scaffolds these and rewrites them on every schema change, so hand-fixing an
+# analyzer complaint here would not survive the next migration.
+[src/**/Migrations/*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
