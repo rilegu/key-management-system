@@ -1,4 +1,5 @@
 using System.Text;
+using KeyManagement.Application.Abstractions;
 using KeyManagement.Infrastructure;
 using KeyManagement.Infrastructure.Persistence;
 using KeyManagement.Infrastructure.Security;
@@ -58,6 +59,8 @@ foreach (var permission in Authorization.All)
         .RequireClaim(JwtTokenIssuer.PermissionClaimType, permission));
 }
 
+builder.Services.AddSignalR();
+builder.Services.AddScoped<ICustodyEventPublisher, SignalRCustodyEventPublisher>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -92,6 +95,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
    .WithName("Health");
 
 app.MapKeyManagementEndpoints();
+app.MapHub<CustodyHub>(CustodyHub.Path);
 
 await app.RunAsync();
 

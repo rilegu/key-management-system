@@ -33,6 +33,7 @@ public sealed class CheckoutService
     private readonly IAuditTrail _audit;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
+    private readonly ICustodyEventPublisher _events;
 
     /// <summary>Creates the service.</summary>
     /// <param name="users">Holders.</param>
@@ -42,6 +43,7 @@ public sealed class CheckoutService
     /// <param name="audit">Records what happened.</param>
     /// <param name="unitOfWork">Commits the work.</param>
     /// <param name="clock">The current time.</param>
+    /// <param name="events">Pushes what happened to connected clients.</param>
     public CheckoutService(
         IUserRepository users,
         IAssetRepository assets,
@@ -49,7 +51,8 @@ public sealed class CheckoutService
         ICheckoutRepository checkouts,
         IAuditTrail audit,
         IUnitOfWork unitOfWork,
-        IClock clock)
+        IClock clock,
+        ICustodyEventPublisher events)
     {
         _users = users;
         _assets = assets;
@@ -58,6 +61,7 @@ public sealed class CheckoutService
         _audit = audit;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _events = events;
     }
 
     /// <summary>Judges a request to take custody of an asset.</summary>
@@ -74,7 +78,9 @@ public sealed class CheckoutService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return await _unitOfWork.InTransactionAsync(async token =>
+        AuditEvent? outcome = null;
+
+        var result = await _unitOfWork.InTransactionAsync(async token =>
         {
             var now = _clock.UtcNow;
             var user = await _users.FindByIdAsync(requestedBy, token).ConfigureAwait(false);
@@ -98,8 +104,10 @@ public sealed class CheckoutService
 
             if (Refuse(user, asset, slot) is { } reason)
             {
-                return await RecordRefusalAsync(
+                var (refused, refusal) = await RecordRefusalAsync(
                     user, asset, slot, reason, now, correlationId, token).ConfigureAwait(false);
+                outcome = refusal;
+                return refused;
             }
 
             // Slot is non-null here: an unassigned asset is refused above.
@@ -111,13 +119,14 @@ public sealed class CheckoutService
             // picks this up and sends the unlock; it never decides for itself.
             asset.BeginCheckout();
 
-            _audit.Record(new AuditEvent(
+            outcome = new AuditEvent(
                     AuditEventType.CheckoutAuthorized,
                     now,
                     correlationId,
                     $"Authorized {asset.Reference} to '{user.UserName}'.")
                 .About(user.Id)
-                .About(asset.Id));
+                .About(asset.Id);
+            _audit.Record(outcome);
 
             await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
 
@@ -128,6 +137,9 @@ public sealed class CheckoutService
                 checkout.State.ToString(),
                 Describe(checkout, asset, user));
         }, cancellationToken).ConfigureAwait(false);
+
+        await PublishAsync(outcome, cancellationToken).ConfigureAwait(false);
+        return result;
     }
 
     /// <summary>Starts the return of an asset that is out.</summary>
@@ -147,7 +159,9 @@ public sealed class CheckoutService
         CorrelationId correlationId,
         CancellationToken cancellationToken = default)
     {
-        return await _unitOfWork.InTransactionAsync(async token =>
+        AuditEvent? outcome = null;
+
+        var result = await _unitOfWork.InTransactionAsync(async token =>
         {
             var now = _clock.UtcNow;
             var checkout = await _checkouts.FindByIdAsync(checkoutId, token).ConfigureAwait(false);
@@ -175,13 +189,14 @@ public sealed class CheckoutService
 
             asset.BeginReturn();
 
-            _audit.Record(new AuditEvent(
+            outcome = new AuditEvent(
                     AuditEventType.ReturnRequested,
                     now,
                     correlationId,
                     $"'{user.UserName}' started returning {asset.Reference}.")
                 .About(user.Id)
-                .About(asset.Id));
+                .About(asset.Id);
+            _audit.Record(outcome);
 
             await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
 
@@ -192,6 +207,9 @@ public sealed class CheckoutService
                 checkout.State.ToString(),
                 Describe(checkout, asset, user));
         }, cancellationToken).ConfigureAwait(false);
+
+        await PublishAsync(outcome, cancellationToken).ConfigureAwait(false);
+        return result;
     }
 
     /// <summary>
@@ -242,7 +260,7 @@ public sealed class CheckoutService
             checkout.ReturnedAt,
             checkout.DenialReason);
 
-    private async Task<CommandResult<CheckoutSummary>> RecordRefusalAsync(
+    private async Task<(CommandResult<CheckoutSummary> Result, AuditEvent Outcome)> RecordRefusalAsync(
         User user,
         Asset asset,
         Slot? slot,
@@ -269,17 +287,47 @@ public sealed class CheckoutService
             _checkouts.Add(denied);
         }
 
-        _audit.Record(new AuditEvent(
+        var refusal = new AuditEvent(
                 AuditEventType.CheckoutDenied,
                 now,
                 correlationId,
                 $"Refused {asset.Reference} to '{user.UserName}': {reason}")
             .About(user.Id)
-            .About(asset.Id));
+            .About(asset.Id);
+        _audit.Record(refusal);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new CommandResult<CheckoutSummary>(
+        var result = new CommandResult<CheckoutSummary>(
             false, reason, correlationId.Value, CheckoutState.Denied.ToString(), null);
+
+        return (result, refusal);
+    }
+
+    /// <summary>
+    /// Announces the outcome to connected clients, after the transaction has committed.
+    /// </summary>
+    /// <remarks>
+    /// After, never inside. Pushing from within the transaction would announce a change that a
+    /// later rollback undoes, leaving every client showing something that never happened.
+    /// </remarks>
+    private Task PublishAsync(AuditEvent? outcome, CancellationToken cancellationToken)
+    {
+        if (outcome is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _events.PublishAsync(
+            new AuditEventSummary(
+                outcome.Id.Value,
+                outcome.Type.ToString(),
+                outcome.OccurredAt,
+                outcome.CorrelationId.Value,
+                outcome.Summary,
+                outcome.UserId?.Value,
+                outcome.AssetId?.Value,
+                outcome.CabinetId?.Value),
+            cancellationToken);
     }
 }

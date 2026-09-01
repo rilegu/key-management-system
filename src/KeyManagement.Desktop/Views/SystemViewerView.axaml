@@ -1,0 +1,277 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KeyManagement.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1240" d:DesignHeight="840"
+             x:Class="KeyManagement.Desktop.Views.SystemViewerView"
+             x:DataType="vm:SystemViewerViewModel">
+
+  <!--
+    Five zones, the arrangement this category of software has settled on: a header carrying the
+    cabinet and its link state, the board in the middle, detail panels down the right, and the
+    activity feed underneath. An operator can answer "where is everything" and "what just
+    happened" without moving.
+  -->
+
+  <Grid RowDefinitions="Auto,*" Margin="20">
+
+    <!-- Header: which cabinet, is it reachable, and the two counts that matter -->
+    <Border Grid.Row="0" Classes="card" Padding="18,14" Margin="0,0,0,14">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+
+        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+          <TextBlock Classes="label" Text="CABINET" />
+          <ComboBox ItemsSource="{Binding Cabinets}"
+                    SelectedItem="{Binding SelectedCabinet}"
+                    MinWidth="220"
+                    Margin="0,4,0,0">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="26,0,0,0">
+          <TextBlock Classes="label" Text="SITE" />
+          <TextBlock Classes="value"
+                     Margin="0,6,0,0"
+                     Text="{Binding SelectedCabinet.Site, FallbackValue='—'}" />
+        </StackPanel>
+
+        <Border Grid.Column="3" Classes="stat out" VerticalAlignment="Center" Margin="0,0,10,0">
+          <StackPanel>
+            <TextBlock Classes="statValue"
+                       Foreground="{DynamicResource StateOutBrush}"
+                       Text="{Binding OutCount}" />
+            <TextBlock Classes="label" Text="OUT OF CABINET" Margin="0,2,0,0" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="4" Classes="stat unconfirmed" VerticalAlignment="Center" Margin="0,0,14,0">
+          <StackPanel>
+            <TextBlock Classes="statValue"
+                       Foreground="{DynamicResource StateUnconfirmedBrush}"
+                       Text="{Binding UnconfirmedCount}" />
+            <TextBlock Classes="label" Text="NOT CONFIRMED" Margin="0,2,0,0" />
+          </StackPanel>
+        </Border>
+
+        <!-- The green/amber/red link indicator every product in this category shares. -->
+        <Border Grid.Column="5" Classes="inset" Padding="12,8" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Ellipse Classes="led online" VerticalAlignment="Center"
+                     IsVisible="{Binding IsLive}" />
+            <Ellipse Classes="led offline" VerticalAlignment="Center"
+                     IsVisible="{Binding !IsLive}" />
+            <TextBlock Classes="caption" VerticalAlignment="Center"
+                       Text="Live" IsVisible="{Binding IsLive}" />
+            <TextBlock Classes="caption" VerticalAlignment="Center"
+                       Text="Not live" IsVisible="{Binding !IsLive}" />
+            <Button Classes="ghost" Content="Reload" Padding="8,4"
+                    Command="{Binding LoadCommand}" />
+          </StackPanel>
+        </Border>
+
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+
+      <!-- Board and activity feed -->
+      <Grid Grid.Column="0" RowDefinitions="*,Auto" Margin="0,0,14,0">
+
+        <Border Grid.Row="0" Classes="panel">
+          <Grid RowDefinitions="Auto,*">
+            <Border Grid.Row="0" Classes="tableHeader">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                  <Path Classes="icon" Data="{StaticResource BoardIcon}"
+                        Width="13" Height="13"
+                        Fill="{DynamicResource TextMutedBrush}" />
+                  <TextBlock Text="POSITIONS" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding Occupancy}" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1" Padding="16,16,6,6">
+              <ItemsControl ItemsSource="{Binding Positions}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:PositionViewModel">
+                    <Border Classes="tile"
+                            Classes.in="{Binding IsIn}"
+                            Classes.out="{Binding IsOut}"
+                            Classes.released="{Binding IsReleased}"
+                            Classes.fault="{Binding IsFault}"
+                            Classes.unconfirmed="{Binding IsUnconfirmed}"
+                            Classes.empty="{Binding IsEmpty}"
+                            Classes.selected="{Binding IsSelected}"
+                            PointerPressed="OnPositionPressed">
+                      <Grid RowDefinitions="5,Auto,*,Auto">
+                        <Border Grid.Row="0" Classes="tileBar" />
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="10,7,10,0">
+                          <TextBlock Grid.Column="0" Classes="tilePosition" Margin="0"
+                                     Text="{Binding Position}" />
+                          <Path Grid.Column="1" Classes="tileIcon"
+                                Data="{StaticResource KeyIcon}"
+                                IsVisible="{Binding !IsEmpty}" />
+                          <Path Grid.Column="1" Classes="tileIcon"
+                                Data="{StaticResource EmptyPositionIcon}"
+                                IsVisible="{Binding IsEmpty}" />
+                        </Grid>
+                        <StackPanel Grid.Row="2" Margin="10,4">
+                          <TextBlock Classes="tileReference" Text="{Binding Reference}" />
+                          <TextBlock Classes="tileDescription" Text="{Binding Description}" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="3" Classes="tileState" Text="{Binding StateWord}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Classes="panel" Height="212" Margin="0,14,0,0">
+          <Grid RowDefinitions="Auto,*">
+            <Border Grid.Row="0" Classes="tableHeader">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Path Classes="icon" Data="{StaticResource ActivityIcon}"
+                      Width="13" Height="13"
+                      Fill="{DynamicResource TextMutedBrush}" />
+                <TextBlock Text="ACTIVITY" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+            <ScrollViewer Grid.Row="1">
+              <ItemsControl ItemsSource="{Binding Activity}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ActivityRowViewModel">
+                    <Border Classes="tableRow">
+                      <Grid ColumnDefinitions="64,150,*,74">
+                        <TextBlock Grid.Column="0" Classes="mono muted" Text="{Binding Time}" />
+                        <TextBlock Grid.Column="1" Text="{Binding What}"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Classes="caption" Text="{Binding Detail}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Classes="mono muted" Text="{Binding Correlation}"
+                                   HorizontalAlignment="Right" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <!-- Detail panels. The pair this software is expected to have: what the system is, and
+           what the selected position holds. -->
+      <StackPanel Grid.Column="1" Width="316" Spacing="14">
+
+        <Border Classes="card">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="label" Text="SYSTEM DETAIL" />
+            <Separator />
+            <StackPanel Spacing="3">
+              <TextBlock Classes="label" Text="NAME" />
+              <TextBlock Classes="value" Text="{Binding SelectedCabinet.Name, FallbackValue='—'}" />
+            </StackPanel>
+            <StackPanel Spacing="3">
+              <TextBlock Classes="label" Text="LAST SEEN" />
+              <TextBlock Classes="value"
+                         Text="{Binding SelectedCabinet.LastSeenAt, FallbackValue='Never', TargetNullValue='Never'}" />
+            </StackPanel>
+            <StackPanel Spacing="3">
+              <TextBlock Classes="label" Text="FIRMWARE" />
+              <TextBlock Classes="value"
+                         Text="{Binding SelectedCabinet.FirmwareVersion, FallbackValue='—', TargetNullValue='—'}" />
+            </StackPanel>
+            <StackPanel Spacing="3">
+              <TextBlock Classes="label" Text="POSITIONS" />
+              <TextBlock Classes="value" Text="{Binding SelectedCabinet.SlotCount, FallbackValue='—'}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="label" Text="ITEM DETAIL" />
+            <Separator />
+
+            <TextBlock Classes="caption"
+                       Text="Select a position to see what it holds."
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding !HasSelection}" />
+
+            <StackPanel Spacing="12" IsVisible="{Binding HasSelection}">
+              <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="POSITION" />
+                <TextBlock Classes="value mono" Text="{Binding SelectedPosition.Position}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="ITEM" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Path Classes="icon" Data="{StaticResource KeyIcon}"
+                        Fill="{DynamicResource AccentBrush}" />
+                  <TextBlock Classes="value" VerticalAlignment="Center"
+                             Text="{Binding SelectedPosition.Reference}" />
+                </StackPanel>
+                <TextBlock Classes="caption"
+                           Text="{Binding SelectedPosition.Description}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Classes="label" Text="STATE" />
+                <Border Classes="chip"
+                        Classes.in="{Binding SelectedPosition.IsIn}"
+                        Classes.out="{Binding SelectedPosition.IsOut}"
+                        Classes.released="{Binding SelectedPosition.IsReleased}"
+                        Classes.fault="{Binding SelectedPosition.IsFault}"
+                        Classes.empty="{Binding SelectedPosition.IsEmpty}">
+                  <TextBlock Text="{Binding SelectedPosition.StateWord}" />
+                </Border>
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="HELD BY" />
+                <TextBlock Classes="value" Text="{Binding HeldBy}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="TAKEN" />
+                <TextBlock Classes="value" Text="{Binding TakenAt}" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="CURFEW" />
+                <TextBlock Classes="value" Text="{Binding Curfew}" />
+              </StackPanel>
+
+              <Separator />
+
+              <!-- Offered only when it makes sense. The server decides regardless, and will
+                   refuse a request this button allowed if the holder is not entitled to it. -->
+              <Button Classes="primary"
+                      Content="Release item"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding RequestItemCommand}" />
+              <Button Classes="secondary"
+                      Content="Start return"
+                      HorizontalAlignment="Stretch"
+                      Command="{Binding ReturnItemCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </Grid>
+  </Grid>
+
+</UserControl>

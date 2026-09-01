@@ -66,15 +66,19 @@ Not built yet.
 
 ## Live events
 
-Not built yet. `/hubs/events` (SignalR). A connection is authorized like any request and receives only what
+`/hubs/events` (SignalR). A connection is authorized like any request and receives only what
 its holder may see.
 
-| Event | Payload |
-| ----- | ------- |
-| `CabinetStatusChanged` | Cabinet id, online state, timestamp |
-| `SlotStateChanged` | Cabinet id, slot id, state, asset |
-| `CheckoutChanged` | Checkout id, asset, holder, state |
-| `AlarmRaised` | Alarm id, type, severity, source |
+| Event | Payload | Status |
+| ----- | ------- | ------ |
+| `Activity` | An audit record: type, time, correlation id, summary, subjects | **works** |
+| `CabinetStatusChanged` | Cabinet id, online state, timestamp | with the device layer |
+| `AlarmRaised` | Alarm id, type, severity, source | with alarms |
+
+The hub sends and never receives. A client cannot ask it to do anything, so there is no second
+command surface to secure alongside the API. A push that fails is logged and dropped rather than
+failing the command that produced it: the database is the system of record, and a client that
+missed one recovers on its next reload.
 
 ## Authorization
 

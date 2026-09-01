@@ -1,0 +1,130 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Every colour in the application is defined here, once per theme, and referenced by role
+    rather than by value. A view that names a hex code is a view that cannot follow the theme.
+
+    The neutrals are blue-tinted rather than pure grey. Pure grey next to a blue accent reads as
+    unfinished; a consistent cool cast makes the chrome look chosen. The brand band across the
+    top carries the identity so the working surfaces below it can stay calm.
+
+    Status colours are the most saturated things on screen, and deliberately so: in a board an
+    operator scans, hue is how state is found, and it should not have to compete with decoration.
+  -->
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Light">
+      <!-- Brand band: the top bar and the application mark. -->
+      <SolidColorBrush x:Key="BrandBrush" Color="#0E3157" />
+      <LinearGradientBrush x:Key="BrandBandBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#134272" />
+        <GradientStop Offset="1" Color="#0D2C4E" />
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="TextOnBrandBrush" Color="#EAF2FB" />
+      <SolidColorBrush x:Key="TextOnBrandMutedBrush" Color="#93B4D6" />
+
+      <SolidColorBrush x:Key="GroundBrush" Color="#ECF1F7" />
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#F5F9FD" />
+      <SolidColorBrush x:Key="SurfaceInsetBrush" Color="#E5EDF6" />
+      <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#E8F1FB" />
+      <SolidColorBrush x:Key="RailBrush" Color="#F7FAFD" />
+
+      <SolidColorBrush x:Key="BorderBrush" Color="#D8E2EC" />
+      <SolidColorBrush x:Key="BorderStrongBrush" Color="#B4C4D5" />
+
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F1C29" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#4E6274" />
+      <SolidColorBrush x:Key="TextMutedBrush" Color="#7D909F" />
+      <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
+
+      <SolidColorBrush x:Key="AccentBrush" Color="#1668B8" />
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="#12558F" />
+      <SolidColorBrush x:Key="AccentSubtleBrush" Color="#DCEBF9" />
+
+      <!-- Position and item states. Named for what they mean on screen. -->
+      <SolidColorBrush x:Key="StateInCabinetBrush" Color="#12784A" />
+      <SolidColorBrush x:Key="StateInCabinetSubtleBrush" Color="#DAF1E4" />
+      <SolidColorBrush x:Key="StateOutBrush" Color="#B45D06" />
+      <SolidColorBrush x:Key="StateOutSubtleBrush" Color="#FCECD6" />
+      <SolidColorBrush x:Key="StateReleasedBrush" Color="#1668B8" />
+      <SolidColorBrush x:Key="StateReleasedSubtleBrush" Color="#DCEBF9" />
+      <SolidColorBrush x:Key="StateFaultBrush" Color="#BE2A20" />
+      <SolidColorBrush x:Key="StateFaultSubtleBrush" Color="#FBE1DF" />
+      <SolidColorBrush x:Key="StateUnconfirmedBrush" Color="#586A7B" />
+      <SolidColorBrush x:Key="StateUnconfirmedSubtleBrush" Color="#E3E9EF" />
+      <SolidColorBrush x:Key="StateEmptyBrush" Color="#93A7B8" />
+      <SolidColorBrush x:Key="StateEmptySubtleBrush" Color="#EFF4F9" />
+
+      <SolidColorBrush x:Key="ShadowBrush" Color="#1A2A3E" Opacity="0.10" />
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Dark">
+      <!--
+        A surface scale, not the light theme inverted. Each step up is a lighter neutral, so
+        depth reads from the surfaces themselves rather than from borders alone, and text
+        contrast is set against the surface it actually sits on.
+      -->
+      <SolidColorBrush x:Key="BrandBrush" Color="#0A1826" />
+      <LinearGradientBrush x:Key="BrandBandBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#12283D" />
+        <GradientStop Offset="1" Color="#0A1826" />
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="TextOnBrandBrush" Color="#DCE8F4" />
+      <SolidColorBrush x:Key="TextOnBrandMutedBrush" Color="#6F8CA8" />
+
+      <SolidColorBrush x:Key="GroundBrush" Color="#0D141C" />
+      <SolidColorBrush x:Key="SurfaceBrush" Color="#161F29" />
+      <SolidColorBrush x:Key="SurfaceSubtleBrush" Color="#1B2632" />
+      <SolidColorBrush x:Key="SurfaceInsetBrush" Color="#111923" />
+      <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#22303E" />
+      <SolidColorBrush x:Key="RailBrush" Color="#131C25" />
+
+      <SolidColorBrush x:Key="BorderBrush" Color="#27343F" />
+      <SolidColorBrush x:Key="BorderStrongBrush" Color="#3A4B5A" />
+
+      <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E6EDF4" />
+      <SolidColorBrush x:Key="TextSecondaryBrush" Color="#94A6B7" />
+      <SolidColorBrush x:Key="TextMutedBrush" Color="#68798A" />
+      <SolidColorBrush x:Key="TextOnAccentBrush" Color="#FFFFFF" />
+
+      <SolidColorBrush x:Key="AccentBrush" Color="#3D97E0" />
+      <SolidColorBrush x:Key="AccentHoverBrush" Color="#5FADEB" />
+      <SolidColorBrush x:Key="AccentSubtleBrush" Color="#152A3D" />
+
+      <SolidColorBrush x:Key="StateInCabinetBrush" Color="#3FC183" />
+      <SolidColorBrush x:Key="StateInCabinetSubtleBrush" Color="#122C20" />
+      <SolidColorBrush x:Key="StateOutBrush" Color="#E0A24C" />
+      <SolidColorBrush x:Key="StateOutSubtleBrush" Color="#2E2416" />
+      <SolidColorBrush x:Key="StateReleasedBrush" Color="#3D97E0" />
+      <SolidColorBrush x:Key="StateReleasedSubtleBrush" Color="#152A3D" />
+      <SolidColorBrush x:Key="StateFaultBrush" Color="#EC6A60" />
+      <SolidColorBrush x:Key="StateFaultSubtleBrush" Color="#331A18" />
+      <SolidColorBrush x:Key="StateUnconfirmedBrush" Color="#8497A9" />
+      <SolidColorBrush x:Key="StateUnconfirmedSubtleBrush" Color="#1E2934" />
+      <SolidColorBrush x:Key="StateEmptyBrush" Color="#4A5B6B" />
+      <SolidColorBrush x:Key="StateEmptySubtleBrush" Color="#141C25" />
+
+      <SolidColorBrush x:Key="ShadowBrush" Color="#000000" Opacity="0.45" />
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Geometry and rhythm, shared by both themes. -->
+  <CornerRadius x:Key="CardRadius">8</CornerRadius>
+  <CornerRadius x:Key="ControlRadius">5</CornerRadius>
+  <CornerRadius x:Key="ChipRadius">4</CornerRadius>
+
+  <x:Double x:Key="FontSizeMicro">10.5</x:Double>
+  <x:Double x:Key="FontSizeSmall">12</x:Double>
+  <x:Double x:Key="FontSizeBody">13</x:Double>
+  <x:Double x:Key="FontSizeLarge">15</x:Double>
+  <x:Double x:Key="FontSizeTitle">19</x:Double>
+  <x:Double x:Key="FontSizeDisplay">28</x:Double>
+
+  <Thickness x:Key="CardPadding">16</Thickness>
+  <Thickness x:Key="RowPadding">12,9</Thickness>
+
+</ResourceDictionary>

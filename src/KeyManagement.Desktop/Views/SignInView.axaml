@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KeyManagement.Desktop.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+             x:Class="KeyManagement.Desktop.Views.SignInView"
+             x:DataType="vm:SignInViewModel">
+
+  <Panel Background="{DynamicResource GroundBrush}">
+    <Border Classes="card"
+            Width="400"
+            Padding="34,32"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            BoxShadow="0 2 12 0 #14000000">
+      <StackPanel Spacing="6">
+
+        <Border Width="46" Height="46"
+                CornerRadius="{DynamicResource CardRadius}"
+                Background="{DynamicResource AccentBrush}"
+                HorizontalAlignment="Left"
+                Margin="0,0,0,16">
+          <Path Classes="icon large"
+                Data="{StaticResource KeyIcon}"
+                Fill="#FFFFFF"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center" />
+        </Border>
+
+        <TextBlock Classes="title" Text="Sign in" />
+        <TextBlock Classes="caption"
+                   Text="On-premises key and asset custody."
+                   Margin="0,0,0,18" />
+
+        <TextBlock Classes="label" Text="USER NAME" />
+        <TextBox Text="{Binding UserName}"
+                 PlaceholderText="admin"
+                 Margin="0,4,0,12" />
+
+        <TextBlock Classes="label" Text="PASSWORD" />
+        <TextBox Text="{Binding Password}"
+                 PasswordChar="•"
+                 Margin="0,4,0,4">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding SignInCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+
+        <!-- The server's refusal, shown as written. It is deliberately identical for an
+             unknown account and a wrong password. -->
+        <Border Classes="chip fault"
+                Margin="0,8,0,0"
+                HorizontalAlignment="Stretch"
+                Padding="10,7"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+        </Border>
+
+        <Button Classes="primary"
+                Content="Sign in"
+                HorizontalAlignment="Stretch"
+                Margin="0,16,0,0"
+                Command="{Binding SignInCommand}"
+                IsEnabled="{Binding !IsBusy}" />
+
+        <ProgressBar IsIndeterminate="True"
+                     Height="2"
+                     Margin="0,10,0,0"
+                     IsVisible="{Binding IsBusy}" />
+
+      </StackPanel>
+    </Border>
+  </Panel>
+
+</UserControl>
