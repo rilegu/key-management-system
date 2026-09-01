@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- No references, by design. The custody rules must be testable without a database,
+       a web host or a UI. DomainIsolationTests enforces this. -->
+
+</Project>

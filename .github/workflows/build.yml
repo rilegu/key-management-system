@@ -1,0 +1,40 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    # The desktop client and the Windows Service host are Windows-targeted, so the whole
+    # solution is verified where it will actually run.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+      - name: Format
+        run: dotnet format --no-restore --verify-no-changes
+
+      # Catches a published document linking to a path that is excluded from git — a link
+      # that resolves for the author and nowhere else.
+      - name: Documentation links
+        shell: pwsh
+        run: ./scripts/check-doc-links.ps1

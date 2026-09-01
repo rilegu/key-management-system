@@ -1,0 +1,46 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# Test and coverage output
+[Tt]est[Rr]esult*/
+coverage*
+*.trx
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+
+# Key material and credentials — never commit
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
+certs/
+secrets/
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Databases. A custody database holds holder identities and access records.
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# OS
+Thumbs.db
+.DS_Store
