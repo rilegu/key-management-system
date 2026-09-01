@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- DTOs on the wire between server and desktop client. No references, so neither side
+       can leak an internal type into the contract. -->
+
+</Project>

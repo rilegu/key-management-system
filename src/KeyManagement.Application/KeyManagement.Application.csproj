@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\KeyManagement.Domain\KeyManagement.Domain.csproj" />
+    <ProjectReference Include="..\KeyManagement.Contracts\KeyManagement.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

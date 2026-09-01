@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared by the server gateway and the simulator, which is what stops the two ends
+       disagreeing about the wire format. -->
+
+</Project>

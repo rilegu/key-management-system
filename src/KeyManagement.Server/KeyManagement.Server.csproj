@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KeyManagement.Application\KeyManagement.Application.csproj" />
+    <ProjectReference Include="..\KeyManagement.Infrastructure\KeyManagement.Infrastructure.csproj" />
+    <ProjectReference Include="..\KeyManagement.Contracts\KeyManagement.Contracts.csproj" />
+    <ProjectReference Include="..\KeyManagement.Devices.Protocol\KeyManagement.Devices.Protocol.csproj" />
+  </ItemGroup>
+
+</Project>

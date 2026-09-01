@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KeyManagement.Application/KeyManagement.Application.csproj" />
+    <Project Path="src/KeyManagement.Contracts/KeyManagement.Contracts.csproj" />
+    <Project Path="src/KeyManagement.Desktop/KeyManagement.Desktop.csproj" />
+    <Project Path="src/KeyManagement.Devices.Protocol/KeyManagement.Devices.Protocol.csproj" />
+    <Project Path="src/KeyManagement.DeviceSimulator/KeyManagement.DeviceSimulator.csproj" />
+    <Project Path="src/KeyManagement.Domain/KeyManagement.Domain.csproj" />
+    <Project Path="src/KeyManagement.Infrastructure/KeyManagement.Infrastructure.csproj" />
+    <Project Path="src/KeyManagement.Server/KeyManagement.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KeyManagement.Application.Tests/KeyManagement.Application.Tests.csproj" />
+    <Project Path="tests/KeyManagement.Desktop.Tests/KeyManagement.Desktop.Tests.csproj" />
+    <Project Path="tests/KeyManagement.Domain.Tests/KeyManagement.Domain.Tests.csproj" />
+    <Project Path="tests/KeyManagement.Infrastructure.Tests/KeyManagement.Infrastructure.Tests.csproj" />
+    <Project Path="tests/KeyManagement.Protocol.Tests/KeyManagement.Protocol.Tests.csproj" />
+    <Project Path="tests/KeyManagement.Server.Tests/KeyManagement.Server.Tests.csproj" />
+  </Folder>
+</Solution>
