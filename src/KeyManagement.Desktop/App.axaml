@@ -1,15 +1,30 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="KeyManagement.Desktop.App"
              xmlns:local="using:KeyManagement.Desktop"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             x:Class="KeyManagement.Desktop.App"
+             RequestedThemeVariant="Light">
+  <!--
+    Light by default. This is administration software that sits alongside other business
+    applications on a workstation, and it should look like it belongs there. The dark theme is
+    complete and switchable for anyone running it in a control room.
+  -->
 
-    <Application.DataTemplates>
-        <local:ViewLocator />
-    </Application.DataTemplates>
+  <Application.DataTemplates>
+    <local:ViewLocator />
+  </Application.DataTemplates>
 
-    <Application.Styles>
-        <FluentTheme />
-    </Application.Styles>
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://KeyManagement.Desktop/Styles/Tokens.axaml" />
+        <ResourceInclude Source="avares://KeyManagement.Desktop/Styles/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://KeyManagement.Desktop/Styles/Controls.axaml" />
+    <StyleInclude Source="avares://KeyManagement.Desktop/Styles/Board.axaml" />
+  </Application.Styles>
 </Application>

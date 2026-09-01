@@ -29,8 +29,14 @@ public sealed class UserRepository : IUserRepository
 
     // Roles and group grants are always loaded together, because every authorization check
     // needs both and a lazy load here would be a query per decision.
+    //
+    // Split, because including two collections in one query multiplies their rows together:
+    // a holder with four roles and six groups fetches twenty-four rows to build ten objects.
     private IQueryable<User> Query() =>
-        _context.Users.Include(u => u.Roles).Include(u => u.GroupMemberships);
+        _context.Users
+            .Include(u => u.Roles)
+            .Include(u => u.GroupMemberships)
+            .AsSplitQuery();
 }
 
 /// <summary>Loads assets for custody decisions.</summary>

@@ -7,11 +7,11 @@ trail.
 On-premises means the system of record runs on the customer's own hardware. There is no cloud
 dependency and no third-party service in the custody path.
 
-> **Early development.** Custody works end to end over the HTTP API: sign in, request an asset,
-> be refused if you may not have it, return it, read the audit trail. There is no user
-> interface and no cabinet communication yet, so the step where a cabinet confirms an asset was
-> physically taken has no hardware behind it. The capability table below is exact — it says
-> what works, not what is planned.
+> **Early development.** Custody works end to end across the desktop client, the API and the
+> database: sign in, see the position board, request an item, be refused if you may not have it,
+> return it, and watch the activity arrive live. Cabinet communication does not exist yet, so
+> the step where a cabinet confirms an item was physically taken has no hardware behind it. The
+> capability table below is exact — it says what works, not what is planned.
 
 ## The problem
 
@@ -73,12 +73,12 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | Authentication, refresh tokens, role-based authorization | **works** |
 | Checkout and return over the HTTP API | **works** |
 | Audit search and correlation | **works** |
+| Desktop client: position board, items, activity | **works** |
+| Live event stream to connected clients | **works** |
 | Cabinet protocol and device gateway | not implemented |
 | Cabinet simulator | not implemented |
-| Avalonia desktop client | not implemented |
-| Live event stream | not implemented |
 | Overdue detection and alarms | not implemented |
-| Audit search and CSV export | not implemented |
+| Audit CSV export | not implemented |
 | TLS and mutual authentication on the device link | not implemented |
 | Windows Service hosting | not implemented |
 
@@ -110,6 +110,22 @@ dotnet build
 dotnet test
 dotnet format --verify-no-changes
 ```
+
+To run it, the server needs a signing key and an initial administrator password. Neither has a
+built-in default, because a default would be the same secret on every deployment.
+
+```bash
+cd src/KeyManagement.Server
+dotnet user-secrets set "Jwt:SigningKey" "<at least 32 bytes>"
+dotnet user-secrets set "Seed:AdministratorPassword" "<initial password>"
+dotnet run
+
+# in another shell
+dotnet run --project src/KeyManagement.Desktop -- --server https://localhost:7183
+```
+
+The database is created and seeded on first start: four roles, two item groups, five items and
+a ten-position cabinet.
 
 ## Layout
 

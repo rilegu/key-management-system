@@ -1,0 +1,382 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Styles are addressed by class, so a view says what a thing is rather than how it looks.
+    Changing the look of every card, chip or table row is then one edit here.
+  -->
+
+  <Design.PreviewWith>
+    <Border Padding="24" Background="{DynamicResource GroundBrush}">
+      <StackPanel Spacing="12" Width="320">
+        <TextBlock Classes="title" Text="Reception" />
+        <TextBlock Classes="caption" Text="GROUND FLOOR" />
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="label" Text="Held by" />
+            <TextBlock Classes="value" Text="J Smith" />
+            <Border Classes="chip out">
+              <TextBlock Text="Out of cabinet" />
+            </Border>
+          </StackPanel>
+        </Border>
+        <Button Classes="primary" Content="Release item" />
+        <Button Classes="ghost" Content="Cancel" />
+      </StackPanel>
+    </Border>
+  </Design.PreviewWith>
+
+  <!-- Typography -->
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+  </Style>
+
+  <Style Selector="TextBlock.display">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.subtitle">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeLarge}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- Small capitalised labels are the workhorse of dense admin screens: they name a field
+       without competing with its value. -->
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+  </Style>
+
+  <Style Selector="TextBlock.value">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <!-- References, timestamps and positions are compared down a column, so they line up. -->
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+  </Style>
+
+  <!-- Surfaces -->
+
+  <!-- A card sits above the ground rather than beside it. The shadow is what stops a light
+       interface reading as a flat wireframe. -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CardRadius}" />
+    <Setter Property="Padding" Value="{DynamicResource CardPadding}" />
+    <Setter Property="BoxShadow" Value="0 1 2 0 #14203040, 0 4 12 -2 #12203040" />
+  </Style>
+
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CardRadius}" />
+    <Setter Property="BoxShadow" Value="0 1 2 0 #14203040, 0 4 12 -2 #12203040" />
+  </Style>
+
+  <!-- A statistic worth reading across the room: large figure, coloured, on its own tinted
+       ground so the eye lands on it before the label. -->
+  <Style Selector="Border.stat">
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}" />
+    <Setter Property="Padding" Value="14,9" />
+    <Setter Property="MinWidth" Value="112" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceInsetBrush}" />
+  </Style>
+  <Style Selector="Border.stat.out">
+    <Setter Property="Background" Value="{DynamicResource StateOutSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.stat.unconfirmed">
+    <Setter Property="Background" Value="{DynamicResource StateUnconfirmedSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.stat TextBlock.statValue">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LineHeight" Value="30" />
+  </Style>
+
+  <Style Selector="Border.inset">
+    <Setter Property="Background" Value="{DynamicResource SurfaceInsetBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}" />
+  </Style>
+
+  <Style Selector="Separator">
+    <Setter Property="Background" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Margin" Value="0,8" />
+  </Style>
+
+  <!-- Status chips. One class per state, matching the token names. -->
+
+  <Style Selector="Border.chip">
+    <Setter Property="CornerRadius" Value="{DynamicResource ChipRadius}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Padding" Value="7,2" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{DynamicResource StateUnconfirmedSubtleBrush}" />
+  </Style>
+
+  <Style Selector="Border.chip > TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="0.4" />
+    <Setter Property="Foreground" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+
+  <Style Selector="Border.chip.in">
+    <Setter Property="Background" Value="{DynamicResource StateInCabinetSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.chip.in > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StateInCabinetBrush}" />
+  </Style>
+
+  <Style Selector="Border.chip.out">
+    <Setter Property="Background" Value="{DynamicResource StateOutSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.chip.out > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StateOutBrush}" />
+  </Style>
+
+  <Style Selector="Border.chip.released">
+    <Setter Property="Background" Value="{DynamicResource StateReleasedSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.chip.released > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StateReleasedBrush}" />
+  </Style>
+
+  <Style Selector="Border.chip.fault">
+    <Setter Property="Background" Value="{DynamicResource StateFaultSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.chip.fault > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StateFaultBrush}" />
+  </Style>
+
+  <Style Selector="Border.chip.empty">
+    <Setter Property="Background" Value="{DynamicResource StateEmptySubtleBrush}" />
+  </Style>
+  <Style Selector="Border.chip.empty > TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource StateEmptyBrush}" />
+  </Style>
+
+  <!-- Connection indicator. The green/amber/red LED is the one convention every product in
+       this category shares, so it is drawn the same way here. -->
+
+  <Style Selector="Ellipse.led">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="Fill" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+  <Style Selector="Ellipse.led.online">
+    <Setter Property="Fill" Value="{DynamicResource StateInCabinetBrush}" />
+  </Style>
+  <Style Selector="Ellipse.led.connecting">
+    <Setter Property="Fill" Value="{DynamicResource StateOutBrush}" />
+  </Style>
+  <Style Selector="Ellipse.led.offline">
+    <Setter Property="Fill" Value="{DynamicResource StateFaultBrush}" />
+  </Style>
+
+  <!-- Buttons -->
+
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnAccentBrush}" />
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- On the dark brand band, where the neutral styles would disappear. -->
+  <Style Selector="Button.onBrand">
+    <Setter Property="Background" Value="#1AFFFFFF" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnBrandBrush}" />
+    <Setter Property="BorderBrush" Value="#33FFFFFF" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,5" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+  </Style>
+  <Style Selector="Button.onBrand:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="#2EFFFFFF" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.45" />
+  </Style>
+
+  <!-- Inputs -->
+
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+
+  <!-- Tables. Built from grids rather than a data grid so density, alignment and hover are
+       under our control rather than a control template's. -->
+
+  <Style Selector="Border.tableHeader">
+    <Setter Property="Background" Value="{DynamicResource SurfaceInsetBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="{DynamicResource RowPadding}" />
+  </Style>
+
+  <Style Selector="Border.tableHeader TextBlock">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+  </Style>
+
+  <Style Selector="Border.tableRow">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="{DynamicResource RowPadding}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.tableRow:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+  </Style>
+
+  <!-- Icons. Sized by class so a glyph is never given a magic number at the point of use. -->
+
+  <Style Selector="Path.icon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Path.icon.large">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+  </Style>
+
+  <Style Selector="Path.icon.mark">
+    <Setter Property="Width" Value="17" />
+    <Setter Property="Height" Value="17" />
+  </Style>
+
+  <!-- Navigation -->
+
+  <Style Selector="RadioButton.nav">
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="Margin" Value="8,1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root"
+                Background="{TemplateBinding Background}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            TextElement.Foreground="{TemplateBinding Foreground}"
+                            TextElement.FontSize="{TemplateBinding FontSize}"
+                            TextElement.FontWeight="{TemplateBinding FontWeight}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.nav:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="RadioButton.nav:checked">
+    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="RadioButton.nav:checked /template/ Border#PART_Root">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+  </Style>
+
+  <!-- The LED glows rather than sitting flat, which is what makes it read as an indicator. -->
+  <Style Selector="Ellipse.led.online">
+    <Setter Property="Fill" Value="{DynamicResource StateInCabinetBrush}" />
+    <Setter Property="Effect" Value="drop-shadow(0 0 5 #4012784A)" />
+  </Style>
+  <Style Selector="Ellipse.led.offline">
+    <Setter Property="Fill" Value="{DynamicResource StateFaultBrush}" />
+    <Setter Property="Effect" Value="drop-shadow(0 0 5 #40BE2A20)" />
+  </Style>
+
+</Styles>

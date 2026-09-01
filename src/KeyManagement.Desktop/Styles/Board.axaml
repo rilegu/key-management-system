@@ -1,0 +1,206 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    The position board: one tile per position, laid out the way the cabinet is, each carrying
+    its own state. It is the screen this category of software is recognised by, so it is the
+    thing the dashboard is built around rather than a widget on it.
+
+    State reaches a tile as a class rather than a colour, so a view never names a brush and the
+    whole board follows the theme.
+  -->
+
+  <Design.PreviewWith>
+    <Border Padding="20" Background="{DynamicResource GroundBrush}">
+      <WrapPanel>
+        <Border Classes="tile in">
+          <Grid RowDefinitions="5,Auto,*,Auto">
+            <Border Grid.Row="0" Classes="tileBar" />
+            <TextBlock Grid.Row="1" Classes="tilePosition" Text="A01" />
+            <StackPanel Grid.Row="2" Margin="10,4">
+              <TextBlock Classes="tileReference" Text="PR-001" />
+              <TextBlock Classes="tileDescription" Text="Boiler house main door" />
+            </StackPanel>
+            <TextBlock Grid.Row="3" Classes="tileState" Text="In cabinet" />
+          </Grid>
+        </Border>
+        <Border Classes="tile out">
+          <Grid RowDefinitions="5,Auto,*,Auto">
+            <Border Grid.Row="0" Classes="tileBar" />
+            <TextBlock Grid.Row="1" Classes="tilePosition" Text="A02" />
+            <StackPanel Grid.Row="2" Margin="10,4">
+              <TextBlock Classes="tileReference" Text="PR-002" />
+              <TextBlock Classes="tileDescription" Text="Riser cupboard" />
+            </StackPanel>
+            <TextBlock Grid.Row="3" Classes="tileState" Text="Out of cabinet" />
+          </Grid>
+        </Border>
+        <Border Classes="tile empty">
+          <Grid RowDefinitions="5,Auto,*,Auto">
+            <Border Grid.Row="0" Classes="tileBar" />
+            <TextBlock Grid.Row="1" Classes="tilePosition" Text="A03" />
+            <StackPanel Grid.Row="2" Margin="10,4">
+              <TextBlock Classes="tileReference" Text="—" />
+            </StackPanel>
+            <TextBlock Grid.Row="3" Classes="tileState" Text="No item" />
+          </Grid>
+        </Border>
+      </WrapPanel>
+    </Border>
+  </Design.PreviewWith>
+
+  <Style Selector="Border.tile">
+    <Setter Property="Width" Value="146" />
+    <Setter Property="Height" Value="104" />
+    <Setter Property="Margin" Value="0,0,10,10" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CardRadius}" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="BoxShadow" Value="0 1 2 0 #14203040" />
+  </Style>
+
+  <Style Selector="Border.tile:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    <Setter Property="BoxShadow" Value="0 2 4 0 #1C203040, 0 6 14 -3 #18203040" />
+  </Style>
+
+  <!-- Selection is a border, not a fill: a filled tile would compete with the status colour,
+       which is the one thing on this screen that has to stay readable at a glance. -->
+  <Style Selector="Border.tile.selected">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="Border.tile > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+
+  <Style Selector="Border.tile > Grid > TextBlock.tilePosition">
+    <Setter Property="Margin" Value="10,7,10,0" />
+    <Setter Property="FontFamily" Value="Consolas, Menlo, monospace" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeSmall}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <!-- The key itself. It says the same thing as the colour bar and the state word, so a
+       position can be read by glyph, by hue or by text. -->
+  <Style Selector="Border.tile Path.tileIcon">
+    <Setter Property="Width" Value="15" />
+    <Setter Property="Height" Value="15" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Fill" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+  <Style Selector="Border.tile.in Path.tileIcon">
+    <Setter Property="Fill" Value="{DynamicResource StateInCabinetBrush}" />
+  </Style>
+  <Style Selector="Border.tile.out Path.tileIcon">
+    <Setter Property="Fill" Value="{DynamicResource StateOutBrush}" />
+    <!-- The key is not here. Shown faint, so an absence looks like an absence. -->
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <Style Selector="Border.tile.released Path.tileIcon">
+    <Setter Property="Fill" Value="{DynamicResource StateReleasedBrush}" />
+  </Style>
+  <Style Selector="Border.tile.fault Path.tileIcon">
+    <Setter Property="Fill" Value="{DynamicResource StateFaultBrush}" />
+  </Style>
+  <Style Selector="Border.tile.empty Path.tileIcon">
+    <Setter Property="Fill" Value="{DynamicResource StateEmptyBrush}" />
+  </Style>
+
+  <Style Selector="Border.tile TextBlock.tileReference">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="Border.tile TextBlock.tileDescription">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Margin" Value="0,1,0,0" />
+  </Style>
+
+  <Style Selector="Border.tile > Grid > TextBlock.tileState">
+    <Setter Property="Margin" Value="10,0,10,8" />
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeMicro}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="0.4" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="Foreground" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+
+  <!-- One block per state. The bar and the state word always agree, so colour and text carry
+       the same message and neither is required to read it. -->
+
+  <Style Selector="Border.tile.in">
+    <Setter Property="Background" Value="{DynamicResource StateInCabinetSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.tile.in > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateInCabinetBrush}" />
+  </Style>
+  <Style Selector="Border.tile.in > Grid > TextBlock.tileState">
+    <Setter Property="Foreground" Value="{DynamicResource StateInCabinetBrush}" />
+  </Style>
+
+  <Style Selector="Border.tile.out">
+    <Setter Property="Background" Value="{DynamicResource StateOutSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.tile.out > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateOutBrush}" />
+  </Style>
+  <Style Selector="Border.tile.out > Grid > TextBlock.tileState">
+    <Setter Property="Foreground" Value="{DynamicResource StateOutBrush}" />
+  </Style>
+
+  <Style Selector="Border.tile.released">
+    <Setter Property="Background" Value="{DynamicResource StateReleasedSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.tile.released > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateReleasedBrush}" />
+  </Style>
+  <Style Selector="Border.tile.released > Grid > TextBlock.tileState">
+    <Setter Property="Foreground" Value="{DynamicResource StateReleasedBrush}" />
+  </Style>
+
+  <Style Selector="Border.tile.fault">
+    <Setter Property="Background" Value="{DynamicResource StateFaultSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.tile.fault > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateFaultBrush}" />
+  </Style>
+  <Style Selector="Border.tile.fault > Grid > TextBlock.tileState">
+    <Setter Property="Foreground" Value="{DynamicResource StateFaultBrush}" />
+  </Style>
+
+  <Style Selector="Border.tile.unconfirmed">
+    <Setter Property="Background" Value="{DynamicResource StateUnconfirmedSubtleBrush}" />
+  </Style>
+  <Style Selector="Border.tile.unconfirmed > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+  <Style Selector="Border.tile.unconfirmed > Grid > TextBlock.tileState">
+    <Setter Property="Foreground" Value="{DynamicResource StateUnconfirmedBrush}" />
+  </Style>
+
+  <!-- A position with nothing assigned to it recedes. Most of a real cabinet looks like this,
+       and a board where every tile shouts tells an operator nothing. -->
+  <Style Selector="Border.tile.empty">
+    <Setter Property="Background" Value="{DynamicResource StateEmptySubtleBrush}" />
+  </Style>
+  <Style Selector="Border.tile.empty > Grid > Border.tileBar">
+    <Setter Property="Background" Value="{DynamicResource StateEmptyBrush}" />
+  </Style>
+  <Style Selector="Border.tile.empty > Grid > TextBlock.tileState">
+    <Setter Property="Foreground" Value="{DynamicResource StateEmptyBrush}" />
+  </Style>
+  <Style Selector="Border.tile.empty TextBlock.tileReference">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+
+</Styles>

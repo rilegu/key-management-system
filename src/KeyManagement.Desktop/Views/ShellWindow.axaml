@@ -1,0 +1,158 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:KeyManagement.Desktop.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1440" d:DesignHeight="900"
+        x:Class="KeyManagement.Desktop.Views.ShellWindow"
+        x:DataType="vm:ShellViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Key Management"
+        Width="1440" Height="900"
+        MinWidth="1100" MinHeight="700"
+        Background="{DynamicResource GroundBrush}">
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- The brand band. A deep, saturated bar across the top carries the identity, which lets
+         every working surface below it stay calm without the whole window looking unfinished. -->
+    <Border Grid.Row="0"
+            Background="{DynamicResource BrandBandBrush}"
+            Padding="18,0"
+            Height="56">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border Width="28" Height="28"
+                  CornerRadius="{DynamicResource ControlRadius}"
+                  Background="{DynamicResource AccentBrush}">
+            <Path Classes="icon mark"
+                  Data="{StaticResource KeyIcon}"
+                  Fill="#FFFFFF"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center" />
+          </Border>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Key Management"
+                       FontSize="{DynamicResource FontSizeLarge}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextOnBrandBrush}" />
+            <TextBlock Text="ON-PREMISES CUSTODY"
+                       FontSize="{DynamicResource FontSizeMicro}"
+                       LetterSpacing="1.1"
+                       Foreground="{DynamicResource TextOnBrandMutedBrush}" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                    VerticalAlignment="Center">
+          <Button Classes="onBrand"
+                  Content="Dark"
+                  Command="{Binding ToggleThemeCommand}"
+                  IsVisible="{Binding !IsDarkTheme}" />
+          <Button Classes="onBrand"
+                  Content="Light"
+                  Command="{Binding ToggleThemeCommand}"
+                  IsVisible="{Binding IsDarkTheme}" />
+          <Border Width="1" Height="22" Background="#33FFFFFF"
+                  IsVisible="{Binding IsSignedIn}" />
+          <TextBlock Text="{Binding HolderName}"
+                     FontSize="{DynamicResource FontSizeBody}"
+                     Foreground="{DynamicResource TextOnBrandBrush}"
+                     VerticalAlignment="Center"
+                     Margin="6,0"
+                     IsVisible="{Binding IsSignedIn}" />
+          <Button Classes="onBrand" Content="Sign out"
+                  Command="{Binding SignOutCommand}"
+                  IsVisible="{Binding IsSignedIn}" />
+        </StackPanel>
+
+      </Grid>
+    </Border>
+
+    <!-- Body -->
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+
+      <!-- Navigation rail. Hidden until there is a session, so sign-in has the window. -->
+      <Border Grid.Column="0"
+              Width="212"
+              Background="{DynamicResource RailBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,0,1,0"
+              IsVisible="{Binding IsSignedIn}">
+        <StackPanel Margin="0,14">
+          <TextBlock Classes="label" Text="MONITOR" Margin="20,0,0,8" />
+          <RadioButton Classes="nav" GroupName="nav"
+                       IsChecked="{Binding IsOnSystemViewer, Mode=OneWay}"
+                       Command="{Binding ShowSystemViewerCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Classes="icon"
+                    Data="{StaticResource BoardIcon}"
+                    Fill="{Binding $parent[RadioButton].Foreground}" />
+              <TextBlock Text="System viewer" VerticalAlignment="Center"
+                         Foreground="{Binding $parent[RadioButton].Foreground}" />
+            </StackPanel>
+          </RadioButton>
+
+          <TextBlock Classes="label" Text="MANAGE" Margin="20,16,0,8" />
+          <RadioButton Classes="nav" GroupName="nav"
+                       IsChecked="{Binding IsOnItems, Mode=OneWay}"
+                       Command="{Binding ShowItemsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Classes="icon"
+                    Data="{StaticResource KeyIcon}"
+                    Fill="{Binding $parent[RadioButton].Foreground}" />
+              <TextBlock Text="Items" VerticalAlignment="Center"
+                         Foreground="{Binding $parent[RadioButton].Foreground}" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton Classes="nav" GroupName="nav"
+                       IsChecked="{Binding IsOnActivity, Mode=OneWay}"
+                       Command="{Binding ShowActivityCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Classes="icon"
+                    Data="{StaticResource ActivityIcon}"
+                    Fill="{Binding $parent[RadioButton].Foreground}" />
+              <TextBlock Text="Activity" VerticalAlignment="Center"
+                         Foreground="{Binding $parent[RadioButton].Foreground}" />
+            </StackPanel>
+          </RadioButton>
+        </StackPanel>
+      </Border>
+
+      <!-- Current screen, resolved by the view locator, with the notice floating over it. -->
+      <Panel Grid.Column="1">
+        <ContentControl Content="{Binding Current}" />
+
+        <Border VerticalAlignment="Bottom"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,22"
+                MaxWidth="620"
+                IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderStrongBrush}"
+                BorderThickness="1"
+                CornerRadius="{DynamicResource CardRadius}"
+                BoxShadow="0 6 20 0 #22000000"
+                Padding="14,10">
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Border Width="3" CornerRadius="2"
+                    Background="{DynamicResource StateInCabinetBrush}"
+                    IsVisible="{Binding !Notice.IsProblem}" />
+            <Border Width="3" CornerRadius="2"
+                    Background="{DynamicResource StateFaultBrush}"
+                    IsVisible="{Binding Notice.IsProblem}" />
+            <TextBlock Text="{Binding Notice.Message}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+            <Button Classes="ghost" Content="Dismiss"
+                    Padding="8,4"
+                    Command="{Binding DismissNoticeCommand}" />
+          </StackPanel>
+        </Border>
+      </Panel>
+
+    </Grid>
+  </Grid>
+
+</Window>

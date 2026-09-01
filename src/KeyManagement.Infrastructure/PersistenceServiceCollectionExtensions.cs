@@ -6,6 +6,7 @@ using KeyManagement.Infrastructure.Security;
 using KeyManagement.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace KeyManagement.Infrastructure;
 
@@ -64,6 +65,10 @@ public static class PersistenceServiceCollectionExtensions
 
         services.AddScoped<SignInService>();
         services.AddScoped<CheckoutService>();
+
+        // Only added if the host has not supplied a real transport, so the server's
+        // SignalR publisher wins wherever one is registered.
+        services.TryAddSingleton<ICustodyEventPublisher, NullCustodyEventPublisher>();
 
         return services;
     }

@@ -171,6 +171,27 @@ uncertain, because the alternative is an audit trail that reads as confident and
 | Single site | Server as a Windows Service, SQLite on the same host, clients on workstations. |
 | Larger site | Device gateway extracted into its own worker so cabinets stay connected across API restarts. |
 
+## The client
+
+One main screen, three supporting ones.
+
+**System viewer** is the board: a tile per position, coloured and worded by state, with system
+and item detail beside it and a live activity list beneath. Selecting a position shows what it
+holds, who has it, when they took it, and when it is due back.
+
+**Items** is a filterable table of everything and where it is. **Activity** searches the trail.
+**Sign in** is the way in.
+
+Two rules hold the client together. It talks to `IKeyManagementClient` and nothing else, so
+there is no database connection and no device protocol on the workstation. And what it offers
+is presentation only: a hidden button is a convenience, never a control, and every request it
+makes is judged again on the server.
+
+The interface uses the vocabulary this industry uses — positions, items, in cabinet, out of
+cabinet, curfew, fault — while the model keeps its own precise names. One map translates
+between them, and it also decides which style class carries each state, so no view ever names
+a colour and both themes follow automatically.
+
 ## Why this shape
 
 **Eight projects rather than one.** A single project is faster to start and impossible to keep
