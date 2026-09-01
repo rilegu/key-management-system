@@ -1,4 +1,4 @@
-# key-management-system
+.kl# key-management-system
 
 An on-premises key and asset custody system. Physical keys are held in electronic cabinets,
 issued to authorized holders, and every issue and return is recorded in an append-only audit
@@ -7,9 +7,11 @@ trail.
 On-premises means the system of record runs on the customer's own hardware. There is no cloud
 dependency and no third-party service in the custody path.
 
-> **Early development.** The custody rules and the database beneath them are built and tested.
-> There is no API, no user interface and no cabinet communication yet. The capability table
-> below is exact — it says what works, not what is planned.
+> **Early development.** Custody works end to end over the HTTP API: sign in, request an asset,
+> be refused if you may not have it, return it, read the audit trail. There is no user
+> interface and no cabinet communication yet, so the step where a cabinet confirms an asset was
+> physically taken has no hardware behind it. The capability table below is exact — it says
+> what works, not what is planned.
 
 ## The problem
 
@@ -68,8 +70,9 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | Custody domain model and state machine | **works** |
 | SQLite persistence, migrations and seed data | **works** |
 | Password and PIN hashing | **works** |
-| Authentication and role-based authorization | not implemented |
-| Checkout and return over the HTTP API | not implemented |
+| Authentication, refresh tokens, role-based authorization | **works** |
+| Checkout and return over the HTTP API | **works** |
+| Audit search and correlation | **works** |
 | Cabinet protocol and device gateway | not implemented |
 | Cabinet simulator | not implemented |
 | Avalonia desktop client | not implemented |

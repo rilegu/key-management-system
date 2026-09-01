@@ -127,6 +127,26 @@ Identifiers are typed rather than bare GUIDs, so passing an `AssetId` where a `S
 fails to compile instead of failing at the database. They are version 7 GUIDs: time-ordered, so
 inserts land at the end of an index rather than scattering across it.
 
+## Authorization
+
+Three checks, in order, and only the third is specific to this system:
+
+1. **Authenticated.** A signed access token, fifteen minutes, carrying one claim per permission.
+2. **Permitted.** An authorization policy per permission, so an endpoint requiring
+   `CheckoutAsset` refuses anyone without the claim before a use case runs.
+3. **Entitled to this asset.** Decided by `CheckoutService`, not by the endpoint. Holding
+   `CheckoutAsset` permits the holder's asset groups, not every asset in the building, and the
+   asset must also be available and its whereabouts confirmed.
+
+The third check is where a refusal becomes a record rather than a status code. It returns `200`
+with `success: false`, a reason written for the person at the workstation, and it writes both a
+`Denied` checkout and an audit entry. A holder is entitled to ask and entitled to an answer;
+what they are not entitled to is the key.
+
+Access tokens are short and cannot be revoked. Refresh tokens are the revocable half: stored
+only as a hash, and consumed on use, so a stolen one stops working the moment the rightful
+holder refreshes.
+
 ## Reliability
 
 The device link is the unreliable part, and three mechanics carry it:

@@ -1,5 +1,6 @@
 using KeyManagement.Infrastructure;
 using KeyManagement.Infrastructure.Persistence;
+using KeyManagement.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -42,7 +43,15 @@ public sealed class TemporaryDatabase : IAsyncDisposable
             $"kms-test-{Guid.CreateVersion7():N}.db");
 
         var services = new ServiceCollection();
-        services.AddKeyManagementPersistence($"Data Source={filePath}");
+        services
+            .AddKeyManagementPersistence($"Data Source={filePath}")
+            .AddKeyManagementUseCases()
+            .AddKeyManagementTokens(new JwtOptions
+            {
+                // Test-only key. Long enough for HMAC-SHA256 and never used anywhere real.
+                SigningKey = "test-signing-key-that-is-long-enough-for-hmac-sha256",
+            });
+
         var provider = services.BuildServiceProvider();
 
         await using (var scope = provider.CreateAsyncScope())
