@@ -7,9 +7,9 @@ trail.
 On-premises means the system of record runs on the customer's own hardware. There is no cloud
 dependency and no third-party service in the custody path.
 
-> **Early development.** The solution structure, documentation and build pipeline are in
-> place; the application is not built yet. The capability table below is exact — it says what
-> works, not what is planned.
+> **Early development.** The custody rules and the database beneath them are built and tested.
+> There is no API, no user interface and no cabinet communication yet. The capability table
+> below is exact — it says what works, not what is planned.
 
 ## The problem
 
@@ -65,8 +65,9 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | ---------- | ------ |
 | Solution structure, layered projects, CI | **works** |
 | Architecture, protocol, API and threat-model documentation | **works** |
-| Custody domain model and state machine | not implemented |
-| SQLite persistence and migrations | not implemented |
+| Custody domain model and state machine | **works** |
+| SQLite persistence, migrations and seed data | **works** |
+| Password and PIN hashing | **works** |
 | Authentication and role-based authorization | not implemented |
 | Checkout and return over the HTTP API | not implemented |
 | Cabinet protocol and device gateway | not implemented |
