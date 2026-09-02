@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,12 +18,15 @@ public sealed partial class ActivityViewModel : ViewModelBase
     public const string AllTypes = "Everything";
 
     private readonly IKeyManagementClient _client;
+    private readonly INotificationService _notifications;
 
     /// <summary>Creates the screen.</summary>
     /// <param name="client">The server.</param>
-    public ActivityViewModel(IKeyManagementClient client)
+    /// <param name="notifications">Tells the operator where the export went.</param>
+    public ActivityViewModel(IKeyManagementClient client, INotificationService notifications)
     {
         _client = client;
+        _notifications = notifications;
 
         Types.Add(AllTypes);
         foreach (var type in new[]
@@ -80,12 +84,7 @@ public sealed partial class ActivityViewModel : ViewModelBase
     [RelayCommand]
     public Task SearchAsync() => RunAsync(async token =>
     {
-        var query = new AuditQuery(
-            From: DateTimeOffset.UtcNow.AddHours(-SelectedWindow),
-            Type: SelectedType == AllTypes ? null : SelectedType,
-            Take: 250);
-
-        var records = await _client.SearchActivityAsync(query, token).ConfigureAwait(true);
+        var records = await _client.SearchActivityAsync(CurrentQuery(), token).ConfigureAwait(true);
 
         Records.Clear();
         foreach (var record in records)
@@ -98,6 +97,33 @@ public sealed partial class ActivityViewModel : ViewModelBase
             ? "First 250 records. Narrow the search to see further back."
             : $"{Records.Count} records";
     });
+
+    /// <summary>Writes the current search to a file.</summary>
+    /// <returns>A task that completes when the file is written.</returns>
+    /// <remarks>
+    /// Exports exactly what is on screen, from the same filters, because the server builds both
+    /// from one query. An export that quietly differs from the search above it is worse than no
+    /// export.
+    /// </remarks>
+    [RelayCommand]
+    public Task ExportAsync() => RunAsync(async token =>
+    {
+        var csv = await _client.ExportActivityAsync(CurrentQuery(), token).ConfigureAwait(true);
+
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            $"audit-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.csv");
+
+        await File.WriteAllTextAsync(path, csv, token).ConfigureAwait(true);
+
+        _notifications.Success($"Exported {Records.Count} records to {path}");
+    });
+
+    private AuditQuery CurrentQuery() =>
+        new(
+            From: DateTimeOffset.UtcNow.AddHours(-SelectedWindow),
+            Type: SelectedType == AllTypes ? null : SelectedType,
+            Take: 250);
 
     partial void OnSelectedTypeChanged(string value) => _ = SearchAsync();
 

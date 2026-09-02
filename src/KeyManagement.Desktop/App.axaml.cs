@@ -68,6 +68,8 @@ public partial class App : Application
         services.AddSingleton<SystemViewerViewModel>();
         services.AddSingleton<ItemsViewModel>();
         services.AddSingleton<ActivityViewModel>();
+        services.AddSingleton<AlarmsViewModel>();
+        services.AddSingleton<AdministrationViewModel>();
         services.AddSingleton<ShellViewModel>();
 
         return services.BuildServiceProvider();

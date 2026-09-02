@@ -147,6 +147,113 @@ public sealed class FakeKeyManagementClient : IKeyManagementClient
         return Task.FromResult(CommandResult ?? Succeeded("Put it back in its position."));
     }
 
+    /// <summary>Holders the fake server holds.</summary>
+    public List<HolderSummary> HolderList { get; } = [];
+
+    /// <summary>Groups the fake server holds.</summary>
+    public List<AssetGroupSummary> GroupList { get; } = [];
+
+    /// <summary>Roles the fake server holds.</summary>
+    public List<RoleSummary> RoleList { get; } = [];
+
+    /// <summary>Group grants and withdrawals, in order.</summary>
+    public List<(Guid Holder, Guid Group, bool Granted)> GroupChanges { get; } = [];
+
+    /// <summary>Status changes, in order.</summary>
+    public List<(Guid Holder, string? Status)> StatusChanges { get; } = [];
+
+    /// <summary>What the next administration command returns.</summary>
+    public CommandResult? AdministrationResult { get; set; }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<HolderSummary>> ListHoldersAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<HolderSummary>>(HolderList);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<RoleSummary>> ListRolesAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<RoleSummary>>(RoleList);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<AssetGroupSummary>> ListGroupsAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<AssetGroupSummary>>(GroupList);
+
+    /// <inheritdoc />
+    public Task<CommandResult> CreateHolderAsync(
+        CreateHolderRequest request, CancellationToken cancellationToken = default)
+    {
+        if (AdministrationResult is { Success: false } refusal)
+        {
+            return Task.FromResult(refusal);
+        }
+
+        HolderList.Add(new HolderSummary(
+            Guid.CreateVersion7(), request.UserName, request.DisplayName, "Active",
+            !string.IsNullOrWhiteSpace(request.Pin), [], []));
+
+        return Task.FromResult(Accepted("Created."));
+    }
+
+    /// <inheritdoc />
+    public Task<CommandResult> AmendHolderAsync(
+        Guid holderId, AmendHolderRequest request, CancellationToken cancellationToken = default)
+    {
+        StatusChanges.Add((holderId, request.Status));
+        return Task.FromResult(AdministrationResult ?? Accepted("Saved."));
+    }
+
+    /// <inheritdoc />
+    public Task<CommandResult> SetHolderGroupAsync(
+        Guid holderId, GrantRequest request, CancellationToken cancellationToken = default)
+    {
+        GroupChanges.Add((holderId, request.Id, request.Granted));
+        return Task.FromResult(AdministrationResult ?? Accepted("Saved."));
+    }
+
+    /// <inheritdoc />
+    public Task<CommandResult> CreateGroupAsync(
+        CreateGroupRequest request, CancellationToken cancellationToken = default)
+    {
+        GroupList.Add(new AssetGroupSummary(Guid.CreateVersion7(), request.Name, request.Description, 0));
+        return Task.FromResult(AdministrationResult ?? Accepted("Created."));
+    }
+
+    /// <inheritdoc />
+    public Task<CommandResult> CreateItemAsync(
+        CreateItemRequest request, CancellationToken cancellationToken = default) =>
+        Task.FromResult(AdministrationResult ?? Accepted("Created."));
+
+    private static CommandResult Accepted(string message) =>
+        new(true, message, Guid.CreateVersion7(), "Active");
+
+    /// <summary>Alarms the fake server holds.</summary>
+    public List<AlarmSummary> Alarms { get; } = [];
+
+    /// <summary>Alarms that were acknowledged, in order.</summary>
+    public List<Guid> Acknowledged { get; } = [];
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<AlarmSummary>> ListAlarmsAsync(
+        bool activeOnly = true, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<AlarmSummary>>(
+            activeOnly ? [.. Alarms.Where(a => a.Status == "Active")] : Alarms);
+
+    /// <inheritdoc />
+    public Task<CommandResult> AcknowledgeAlarmAsync(
+        Guid alarmId, CancellationToken cancellationToken = default)
+    {
+        Acknowledged.Add(alarmId);
+        return Task.FromResult(new CommandResult(
+            true, "Acknowledged.", Guid.CreateVersion7(), "Acknowledged"));
+    }
+
+    /// <inheritdoc />
+    public Task<string> ExportActivityAsync(
+        AuditQuery query, CancellationToken cancellationToken = default) =>
+        Task.FromResult("Occurred (UTC),Type,Summary,Correlation,User,Asset,Cabinet");
+
     /// <inheritdoc />
     public Task<IReadOnlyList<AuditEventSummary>> SearchActivityAsync(
         AuditQuery query, CancellationToken cancellationToken = default) =>

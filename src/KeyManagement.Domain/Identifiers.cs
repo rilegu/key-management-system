@@ -85,6 +85,18 @@ public readonly record struct CheckoutId(Guid Value)
     public override string ToString() => Value.ToString();
 }
 
+/// <summary>Identifies an alarm.</summary>
+/// <param name="Value">The underlying value.</param>
+public readonly record struct AlarmId(Guid Value)
+{
+    /// <summary>Creates an identifier for a new alarm.</summary>
+    /// <returns>The identifier.</returns>
+    public static AlarmId New() => new(Guid.CreateVersion7());
+
+    /// <inheritdoc />
+    public override string ToString() => Value.ToString();
+}
+
 /// <summary>Identifies an audit record.</summary>
 /// <param name="Value">The underlying value.</param>
 public readonly record struct AuditEventId(Guid Value)

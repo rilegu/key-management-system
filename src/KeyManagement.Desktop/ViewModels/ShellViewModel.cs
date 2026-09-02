@@ -23,6 +23,8 @@ public sealed partial class ShellViewModel : ViewModelBase
     private readonly SystemViewerViewModel _systemViewer;
     private readonly ItemsViewModel _items;
     private readonly ActivityViewModel _activity;
+    private readonly AlarmsViewModel _alarms;
+    private readonly AdministrationViewModel _administration;
     private DispatcherTimer? _notificationTimer;
 
     /// <summary>Creates the shell.</summary>
@@ -33,6 +35,8 @@ public sealed partial class ShellViewModel : ViewModelBase
     /// <param name="systemViewer">The board.</param>
     /// <param name="items">The items table.</param>
     /// <param name="activity">The activity trail.</param>
+    /// <param name="alarms">Things an operator is expected to look at.</param>
+    /// <param name="administration">Holders, groups and items.</param>
     public ShellViewModel(
         IKeyManagementClient client,
         NavigationService navigation,
@@ -40,7 +44,9 @@ public sealed partial class ShellViewModel : ViewModelBase
         SignInViewModel signIn,
         SystemViewerViewModel systemViewer,
         ItemsViewModel items,
-        ActivityViewModel activity)
+        ActivityViewModel activity,
+        AlarmsViewModel alarms,
+        AdministrationViewModel administration)
     {
         _client = client;
         _navigation = navigation;
@@ -49,6 +55,8 @@ public sealed partial class ShellViewModel : ViewModelBase
         _systemViewer = systemViewer;
         _items = items;
         _activity = activity;
+        _alarms = alarms;
+        _administration = administration;
 
         _navigation.Requested += destination => _ = GoToAsync(destination);
         _notifications.Raised += Show;
@@ -89,6 +97,12 @@ public sealed partial class ShellViewModel : ViewModelBase
     /// <summary>Whether the activity trail is on show.</summary>
     public bool IsOnActivity => Location == Destination.Activity;
 
+    /// <summary>Whether the alarm list is on show.</summary>
+    public bool IsOnAlarms => Location == Destination.Alarms;
+
+    /// <summary>Whether the administration screen is on show.</summary>
+    public bool IsOnAdministration => Location == Destination.Administration;
+
     /// <summary>Shows the board.</summary>
     /// <returns>A task that completes when the screen is ready.</returns>
     [RelayCommand]
@@ -103,6 +117,16 @@ public sealed partial class ShellViewModel : ViewModelBase
     /// <returns>A task that completes when the screen is ready.</returns>
     [RelayCommand]
     public Task ShowActivityAsync() => GoToAsync(Destination.Activity);
+
+    /// <summary>Shows the alarm list.</summary>
+    /// <returns>A task that completes when the screen is ready.</returns>
+    [RelayCommand]
+    public Task ShowAlarmsAsync() => GoToAsync(Destination.Alarms);
+
+    /// <summary>Shows holders, groups and items.</summary>
+    /// <returns>A task that completes when the screen is ready.</returns>
+    [RelayCommand]
+    public Task ShowAdministrationAsync() => GoToAsync(Destination.Administration);
 
     /// <summary>Ends the session and returns to sign-in.</summary>
     [RelayCommand]
@@ -164,6 +188,16 @@ public sealed partial class ShellViewModel : ViewModelBase
                 await _activity.SearchAsync().ConfigureAwait(true);
                 break;
 
+            case Destination.Alarms:
+                Current = _alarms;
+                await _alarms.LoadAsync().ConfigureAwait(true);
+                break;
+
+            case Destination.Administration:
+                Current = _administration;
+                await _administration.LoadAsync().ConfigureAwait(true);
+                break;
+
             case Destination.SignIn:
             default:
                 Current = _signIn;
@@ -178,6 +212,8 @@ public sealed partial class ShellViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsOnSystemViewer));
         OnPropertyChanged(nameof(IsOnItems));
         OnPropertyChanged(nameof(IsOnActivity));
+        OnPropertyChanged(nameof(IsOnAlarms));
+        OnPropertyChanged(nameof(IsOnAdministration));
     }
 
     private void Show(Notification notification)

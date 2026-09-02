@@ -124,6 +124,14 @@ public sealed class User
     /// <param name="pinHash">Already hashed, or <see langword="null"/> to clear.</param>
     public void SetPinHash(string? pinHash) => PinHash = pinHash;
 
+    /// <summary>Changes the name shown in the interface and in the trail.</summary>
+    /// <param name="displayName">The new name.</param>
+    public void SetDisplayName(string displayName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        DisplayName = displayName;
+    }
+
     /// <summary>Changes whether the holder may use the system.</summary>
     /// <param name="status">The new status.</param>
     public void SetStatus(UserStatus status) => Status = status;

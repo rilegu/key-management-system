@@ -79,6 +79,89 @@ public interface IKeyManagementClient
         Guid checkoutId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Lists holders with what each has been granted.</summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The holders.</returns>
+    Task<IReadOnlyList<HolderSummary>> ListHoldersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Lists roles and what they allow.</summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The roles.</returns>
+    Task<IReadOnlyList<RoleSummary>> ListRolesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Lists item groups.</summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The groups.</returns>
+    Task<IReadOnlyList<AssetGroupSummary>> ListGroupsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a holder.</summary>
+    /// <param name="request">Who to create.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The outcome.</returns>
+    Task<CommandResult> CreateHolderAsync(
+        CreateHolderRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Changes a holder's name or status.</summary>
+    /// <param name="holderId">The holder.</param>
+    /// <param name="request">What to change.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The outcome.</returns>
+    Task<CommandResult> AmendHolderAsync(
+        Guid holderId,
+        AmendHolderRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Grants or withdraws access to an item group.</summary>
+    /// <param name="holderId">The holder.</param>
+    /// <param name="request">Which group, and whether it is given or taken.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The outcome.</returns>
+    Task<CommandResult> SetHolderGroupAsync(
+        Guid holderId,
+        GrantRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Creates an item group.</summary>
+    /// <param name="request">The group.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The outcome.</returns>
+    Task<CommandResult> CreateGroupAsync(
+        CreateGroupRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Creates an item.</summary>
+    /// <param name="request">The item.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The outcome.</returns>
+    Task<CommandResult> CreateItemAsync(
+        CreateItemRequest request,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Lists alarms, most recent first.</summary>
+    /// <param name="activeOnly">Whether to leave out ones already acknowledged.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The alarms.</returns>
+    Task<IReadOnlyList<AlarmSummary>> ListAlarmsAsync(
+        bool activeOnly = true,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Records that someone has seen an alarm.</summary>
+    /// <param name="alarmId">The alarm.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The outcome.</returns>
+    Task<CommandResult> AcknowledgeAlarmAsync(
+        Guid alarmId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Downloads the activity trail as comma-separated values.</summary>
+    /// <param name="query">How to narrow the export.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The file's contents.</returns>
+    Task<string> ExportActivityAsync(
+        AuditQuery query,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Searches the activity trail, newest first.</summary>
     /// <param name="query">How to narrow the search.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>

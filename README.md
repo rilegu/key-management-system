@@ -8,9 +8,11 @@ On-premises means the system of record runs on the customer's own hardware. Ther
 dependency and no third-party service in the custody path.
 
 > **Early development.** The whole custody path runs: a desktop client, an API, a database, and
-> a cabinet simulator you can start and type at. The device link is mutually authenticated, and
-> a key is only in someone's custody once the cabinet says the position emptied. The capability
-> table below is exact — it says what works, not what is planned.
+> a cabinet simulator you can start and type at. The device link is mutually authenticated, a
+> key is only in someone's custody once the cabinet says the position emptied, and overdue items
+> and unauthorized removals raise alarms an operator acknowledges. What is left is deployment:
+> service hosting and a scripted demonstration. The capability table below is exact — it says
+> what works, not what is planned.
 
 ## The problem
 
@@ -78,8 +80,9 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | Cabinet simulator, with fault injection | **works** |
 | TLS and mutual authentication on the device link | **works** |
 | Cabinet keypad: PIN request at the cabinet | **works** |
-| Overdue detection and alarms | not implemented |
-| Audit CSV export | not implemented |
+| Overdue detection, alarms and acknowledgement | **works** |
+| Audit CSV export | **works** |
+| Administration: holders, roles, groups, items | **works** |
 | Windows Service hosting | not implemented |
 
 ## Limitations

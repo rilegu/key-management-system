@@ -1,6 +1,7 @@
 using System.Reflection;
 using KeyManagement.Domain;
 using KeyManagement.Domain.Access;
+using KeyManagement.Domain.Alarms;
 using KeyManagement.Domain.Assets;
 using KeyManagement.Domain.Auditing;
 using KeyManagement.Domain.Cabinets;
@@ -56,6 +57,9 @@ public sealed class KeyManagementDbContext : DbContext
     /// <summary>Messages received from cabinets, as reported.</summary>
     public DbSet<DeviceEvent> DeviceEvents => Set<DeviceEvent>();
 
+    /// <summary>Things an operator is expected to look at.</summary>
+    public DbSet<Alarm> Alarms => Set<Alarm>();
+
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -72,6 +76,7 @@ public sealed class KeyManagementDbContext : DbContext
         configurationBuilder.Properties<DeviceEventId>().HaveConversion<DeviceEventIdConverter>();
         configurationBuilder.Properties<RefreshTokenId>().HaveConversion<RefreshTokenIdConverter>();
         configurationBuilder.Properties<CorrelationId>().HaveConversion<CorrelationIdConverter>();
+        configurationBuilder.Properties<AlarmId>().HaveConversion<AlarmIdConverter>();
 
         configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcDateTimeOffsetConverter>();
 

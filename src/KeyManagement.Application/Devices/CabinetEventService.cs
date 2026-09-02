@@ -1,8 +1,10 @@
 using System.Globalization;
 using KeyManagement.Application.Abstractions;
+using KeyManagement.Application.Alarms;
 using KeyManagement.Application.Custody;
 using KeyManagement.Contracts;
 using KeyManagement.Domain;
+using KeyManagement.Domain.Alarms;
 using KeyManagement.Domain.Assets;
 using KeyManagement.Domain.Auditing;
 using KeyManagement.Domain.Cabinets;
@@ -35,6 +37,7 @@ public sealed class CabinetEventService
     private readonly IAuditTrail _audit;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly AlarmService _alarms;
     private readonly IClock _clock;
 
     /// <summary>Creates the service.</summary>
@@ -47,6 +50,7 @@ public sealed class CabinetEventService
     /// <param name="unitOfWork">Commits the work.</param>
     /// <param name="passwordHasher">Verifies the cabinet's credential.</param>
     /// <param name="clock">The current time.</param>
+    /// <param name="alarms">Raises what an operator needs to look at.</param>
     public CabinetEventService(
         ICabinetRepository cabinets,
         IUserRepository users,
@@ -56,7 +60,8 @@ public sealed class CabinetEventService
         IAuditTrail audit,
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
-        IClock clock)
+        IClock clock,
+        AlarmService alarms)
     {
         _cabinets = cabinets;
         _users = users;
@@ -67,6 +72,7 @@ public sealed class CabinetEventService
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _clock = clock;
+        _alarms = alarms;
     }
 
     /// <summary>Decides whether a cabinet may attach, and what it should replay.</summary>
@@ -161,6 +167,18 @@ public sealed class CabinetEventService
                 $"Cabinet '{cabinet.Name}' stopped answering. Its positions are no longer confirmed.")
             .About(cabinet.Id));
 
+        await _alarms.RaiseAsync(
+                Alarm.Raise(
+                        AlarmType.CabinetOffline,
+                        AlarmSeverity.Warning,
+                        Alarm.OfflineScope(cabinet.Id),
+                        $"Cabinet '{cabinet.Name}' is not answering. Its positions are not confirmed.",
+                        now,
+                        CorrelationId.New())
+                    .About(cabinet.Id),
+                cancellationToken)
+            .ConfigureAwait(false);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -214,6 +232,8 @@ public sealed class CabinetEventService
             var outcome = slot.AssetId is { } assetId
                 ? await ApplyToItemAsync(cabinet, assetId, report, token).ConfigureAwait(false)
                 : ReportOutcome.Applied;
+
+            await RaiseForReportAsync(cabinet, slot.AssetId, report, outcome, token).ConfigureAwait(false);
 
             _deviceEvents.Record(Received(cabinetId, report, payload, now, applied: true));
             await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
@@ -300,6 +320,48 @@ public sealed class CabinetEventService
         DateTimeOffset receivedAt,
         bool applied) =>
         new(cabinetId, report.Sequence, nameof(PositionReport), payload, report.At, receivedAt, applied);
+
+    private async Task RaiseForReportAsync(
+        Cabinet cabinet,
+        AssetId? assetId,
+        PositionReport report,
+        ReportOutcome outcome,
+        CancellationToken cancellationToken)
+    {
+        var reference = assetId is { } id
+            ? (await _assets.FindByIdAsync(id, cancellationToken).ConfigureAwait(false))?.Reference
+            : null;
+
+        Alarm? alarm = outcome switch
+        {
+            ReportOutcome.Unauthorized when assetId is { } subject => Alarm.Raise(
+                    AlarmType.UnauthorizedRemoval,
+                    AlarmSeverity.Critical,
+                    Alarm.UnauthorizedScope(subject),
+                    $"{reference} left {cabinet.Name} {report.Position} with no release authorized.",
+                    report.At,
+                    CorrelationId.New())
+                .About(subject)
+                .About(cabinet.Id),
+
+            _ when report.State == SlotState.Faulted => Alarm.Raise(
+                    AlarmType.PositionFault,
+                    AlarmSeverity.Warning,
+                    Alarm.FaultScope(cabinet.Id, report.Position),
+                    $"{cabinet.Name} {report.Position} reported a fault." +
+                    (reference is null ? string.Empty : $" Custody of {reference} is not confirmed."),
+                    report.At,
+                    CorrelationId.New())
+                .About(cabinet.Id),
+
+            _ => null,
+        };
+
+        if (alarm is not null)
+        {
+            await _alarms.RaiseAsync(alarm, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     private async Task<ReportOutcome> ApplyToItemAsync(
         Cabinet cabinet,

@@ -82,6 +82,12 @@ builder.Services.AddSingleton<ICabinetGateway>(s => s.GetRequiredService<Cabinet
 builder.Services.AddSingleton<DeviceGatewayService>();
 builder.Services.AddHostedService(s => s.GetRequiredService<DeviceGatewayService>());
 
+var sweep = builder.Configuration.GetSection(CustodySweepOptions.SectionName)
+    .Get<CustodySweepOptions>() ?? new CustodySweepOptions();
+
+builder.Services.AddSingleton(sweep);
+builder.Services.AddHostedService<CustodySweepService>();
+
 builder.Services.AddSignalR();
 builder.Services.AddScoped<ICustodyEventPublisher, SignalRCustodyEventPublisher>();
 builder.Services.AddOpenApi();

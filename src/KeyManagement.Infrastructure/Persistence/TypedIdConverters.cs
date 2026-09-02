@@ -108,6 +108,16 @@ public sealed class RefreshTokenIdConverter : ValueConverter<RefreshTokenId, Gui
     }
 }
 
+/// <summary>Stores an <see cref="AlarmId"/> as its underlying value.</summary>
+public sealed class AlarmIdConverter : ValueConverter<AlarmId, Guid>
+{
+    /// <summary>Creates the converter.</summary>
+    public AlarmIdConverter()
+        : base(id => id.Value, value => new AlarmId(value))
+    {
+    }
+}
+
 /// <summary>Stores a <see cref="CorrelationId"/> as its underlying value.</summary>
 public sealed class CorrelationIdConverter : ValueConverter<CorrelationId, Guid>
 {

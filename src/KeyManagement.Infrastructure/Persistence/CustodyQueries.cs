@@ -1,6 +1,10 @@
+using System.Buffers;
+using System.Globalization;
 using KeyManagement.Application.Abstractions;
 using KeyManagement.Contracts;
 using KeyManagement.Domain;
+using KeyManagement.Domain.Access;
+using KeyManagement.Domain.Alarms;
 using KeyManagement.Domain.Assets;
 using KeyManagement.Domain.Auditing;
 using KeyManagement.Domain.Cabinets;
@@ -31,6 +35,11 @@ public sealed class CustodyQueries : ICustodyQueries
     public const int MaximumAuditResults = 500;
 
     private const int RecentEventsOnDashboard = 20;
+
+    // A value containing any of these has to be quoted, or it silently shifts every later
+    // column. Audit summaries are free text, and commas in them are ordinary.
+    private static readonly SearchValues<char> SeparatorsNeedingQuotes =
+        SearchValues.Create(",\"\r\n");
 
     private static readonly CheckoutState[] OpenStates =
         [CheckoutState.Pending, CheckoutState.Active, CheckoutState.Overdue];
@@ -170,6 +179,144 @@ public sealed class CustodyQueries : ICustodyQueries
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AlarmSummary>> ListAlarmsAsync(
+        bool activeOnly = true,
+        CancellationToken cancellationToken = default)
+    {
+        var alarms = _context.Alarms.AsNoTracking();
+
+        if (activeOnly)
+        {
+            alarms = alarms.Where(a => a.Status == AlarmStatus.Active);
+        }
+
+        return await alarms
+            .OrderByDescending(a => a.RaisedAt)
+            .Take(MaximumAuditResults)
+            .Select(a => new AlarmSummary(
+                a.Id.Value,
+                a.Type.ToString(),
+                a.Severity.ToString(),
+                a.Status.ToString(),
+                a.Summary,
+                a.RaisedAt,
+                a.CorrelationId.Value,
+                a.AssetId == null ? null : a.AssetId.Value.Value,
+                _context.Assets
+                    .Where(i => a.AssetId != null && i.Id == a.AssetId)
+                    .Select(i => i.Reference)
+                    .FirstOrDefault(),
+                a.CabinetId == null ? null : a.CabinetId.Value.Value,
+                a.AcknowledgedAt,
+                _context.Users
+                    .Where(u => a.AcknowledgedBy != null && u.Id == a.AcknowledgedBy)
+                    .Select(u => u.DisplayName)
+                    .FirstOrDefault()))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<string> ExportAuditAsync(
+        AuditQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var records = await SearchAuditAsync(query, cancellationToken).ConfigureAwait(false);
+        var csv = new System.Text.StringBuilder();
+
+        csv.AppendLine("Occurred (UTC),Type,Summary,Correlation,User,Asset,Cabinet");
+
+        foreach (var record in records)
+        {
+            csv.Append(Escape(record.OccurredAt.ToString("u", CultureInfo.InvariantCulture))).Append(',')
+               .Append(Escape(record.Type)).Append(',')
+               .Append(Escape(record.Summary)).Append(',')
+               .Append(Escape(record.CorrelationId.ToString())).Append(',')
+               .Append(Escape(record.UserId?.ToString())).Append(',')
+               .Append(Escape(record.AssetId?.ToString())).Append(',')
+               .Append(Escape(record.CabinetId?.ToString()))
+               .AppendLine();
+        }
+
+        return csv.ToString();
+    }
+
+    // Quoted whenever the value could break the row, and embedded quotes doubled. An audit
+    // summary is free text written by this system, and a comma in one must not silently shift
+    // every later column.
+    private static string Escape(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var needsQuotes = value.AsSpan().IndexOfAny(SeparatorsNeedingQuotes) >= 0;
+
+        return needsQuotes
+            ? string.Concat("\"", value.Replace("\"", "\"\"", StringComparison.Ordinal), "\"")
+            : value;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<HolderSummary>> ListHoldersAsync(
+        CancellationToken cancellationToken = default) =>
+        await _context.Users
+            .AsNoTracking()
+            .OrderBy(u => u.UserName)
+            .Select(u => new HolderSummary(
+                u.Id.Value,
+                u.UserName,
+                u.DisplayName,
+                u.Status.ToString(),
+                u.PinHash != null,
+                u.Roles.Select(r => r.Name).ToList(),
+                _context.AssetGroups
+                    .Where(g => u.GroupMemberships.Any(m => m.AssetGroupId == g.Id))
+                    .Select(g => g.Name)
+                    .ToList()))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RoleSummary>> ListRolesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var roles = await _context.Roles
+            .AsNoTracking()
+            .OrderBy(r => r.Name)
+            .Select(r => new { r.Id, r.Name, r.Permissions })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // Split apart here rather than in the query: a flags value is one column, and turning
+        // it into the names it stands for is not something the provider can translate.
+        return
+        [
+            .. roles.Select(r => new RoleSummary(
+                r.Id.Value,
+                r.Name,
+                [.. Enum.GetValues<Permissions>()
+                    .Where(p => p != Permissions.None && r.Permissions.HasFlag(p))
+                    .Select(p => p.ToString())])),
+        ];
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AssetGroupSummary>> ListGroupsAsync(
+        CancellationToken cancellationToken = default) =>
+        await _context.AssetGroups
+            .AsNoTracking()
+            .OrderBy(g => g.Name)
+            .Select(g => new AssetGroupSummary(
+                g.Id.Value,
+                g.Name,
+                g.Description,
+                _context.Assets.Count(a => a.AssetGroupId == g.Id)))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
     /// <inheritdoc />
     public async Task<DashboardSummary> GetDashboardAsync(CancellationToken cancellationToken = default)
