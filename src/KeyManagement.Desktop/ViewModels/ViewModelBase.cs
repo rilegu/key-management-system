@@ -65,6 +65,16 @@ public abstract partial class ViewModelBase : ObservableValidator
         {
             // The screen moved on or the window closed. Nothing to report.
         }
+#pragma warning disable CA1031 // Last resort: see below.
+        catch (Exception exception)
+        {
+            // An exception that escapes here is rethrown by the command on the dispatcher, which
+            // ends the process — one screen's defect closing the window mid-shift. A workstation
+            // that shows an error is always better than one that vanishes.
+            ErrorMessage = "Something went wrong on this screen. Reload and try again.";
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
+#pragma warning restore CA1031
         finally
         {
             _depth--;

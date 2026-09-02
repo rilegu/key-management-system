@@ -18,7 +18,7 @@ namespace KeyManagement.Server.Tests;
 /// <remarks>
 /// Nothing is substituted but the database path and the signing key. Authentication,
 /// authorization policies, the interceptors and the endpoint routing are the ones that ship,
-/// so a policy wired to the wrong claim fails here rather than in the client sprint.
+/// so a policy wired to the wrong claim fails here rather than in the desktop client.
 /// </remarks>
 public sealed class KeyManagementApi : WebApplicationFactory<Program>, IAsyncLifetime
 {
