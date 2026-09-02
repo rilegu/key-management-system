@@ -34,6 +34,10 @@ secrets/
 appsettings.Local.json
 appsettings.*.Local.json
 
+# Everything scripts/demo.ps1 creates: a throwaway database, its certificates and its
+# simulator configuration.
+demo/
+
 # Databases. A custody database holds holder identities and access records.
 *.db
 *.db-shm

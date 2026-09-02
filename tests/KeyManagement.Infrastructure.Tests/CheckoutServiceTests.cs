@@ -294,7 +294,8 @@ public sealed class CheckoutServiceTests
         var request = await RequestAsync(fixture);
         var checkoutId = new CheckoutId(request.Data!.Id);
 
-        // The cabinet confirms the asset was taken; until sprint five that is done here.
+        // Stands in for the cabinet confirming the asset was taken, so this test stays about
+        // the checkout rules rather than the device link.
         await fixture.Database.WithContextAsync(async context =>
         {
             var asset = await context.Assets.SingleAsync(a => a.Id == fixture.AssetId);

@@ -212,11 +212,46 @@ uncertain, because the alternative is an audit trail that reads as confident and
 
 ## Deployment
 
+One executable, three roles, chosen by `Hosting:Role`. The role is the deployment's intent and
+overrules the individual sections: an `Api` process never opens the device port however the
+gateway section is configured.
+
+```
+All (the default)                    Api + Gateway (split)
+
+┌──────────────────────────┐         ┌─────────────────┐   ┌─────────────────────┐
+│  Key Management          │         │  Key Management │   │  Key Management     │
+│                          │         │  (Api)          │   │  (Gateway)          │
+│  REST + live feed        │         │                 │   │                     │
+│  device gateway :5610    │         │  REST + feed    │   │  gateway :5610      │
+│  custody sweep           │         │                 │   │  custody sweep      │
+└────────────┬─────────────┘         └────────┬────────┘   └──────────┬──────────┘
+             │                                │                       │
+        ┌────▼────┐                           └───────┬───────────────┘
+        │ SQLite  │                                ┌──▼──────┐
+        └─────────┘                                │ SQLite  │
+                                                   └─────────┘
+```
+
 | Model | Shape |
 | ----- | ----- |
-| Development | Server, simulator and client as three console processes on one machine. |
-| Single site | Server as a Windows Service, SQLite on the same host, clients on workstations. |
-| Larger site | Device gateway extracted into its own worker so cabinets stay connected across API restarts. |
+| Development | `scripts/demo.ps1` starts server, simulator and client against a throwaway database. |
+| Single site | One service, `Hosting:Role=All`, SQLite on the same host, clients on workstations. |
+| Split | Two services against one database, so cabinets stay attached across an API restart. |
+
+**The split has a cost, and it is not free to hide.** The live event stream is per-process, so
+device activity picked up by a separate gateway does not reach clients connected to the API until
+they reload. Distributing it would need a backplane, which a single site does not justify.
+`All` is the default for that reason.
+
+Both halves write to the same SQLite file. That works because every connection sets a
+`busy_timeout` and the journal is in WAL mode — the two settings that make a second writer wait
+rather than fail. It is also the point at which SQLite's single-writer limit stops being free,
+and where a deployment with several sites should be looking at a different store.
+
+Secrets are never in a configuration file. `scripts/install-service.ps1` writes the signing key
+and the certificate password into the service's own environment, so a file readable by anyone who
+can reach the folder does not hand them the keys.
 
 ## The client
 

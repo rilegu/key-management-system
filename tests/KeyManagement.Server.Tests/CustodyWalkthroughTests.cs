@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KeyManagement.Server.Tests;
 
 /// <summary>
-/// The sprint's done-condition, walked over HTTP: sign in, check out, be refused, return, read
+/// The custody loop, walked end to end over HTTP: sign in, check out, be refused, return, read
 /// the trail.
 /// </summary>
 public sealed class CustodyWalkthroughTests : IClassFixture<KeyManagementApi>

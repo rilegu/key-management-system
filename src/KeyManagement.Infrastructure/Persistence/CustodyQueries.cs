@@ -262,23 +262,54 @@ public sealed class CustodyQueries : ICustodyQueries
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<HolderSummary>> ListHoldersAsync(
-        CancellationToken cancellationToken = default) =>
-        await _context.Users
+        CancellationToken cancellationToken = default)
+    {
+        var holders = await _context.Users
             .AsNoTracking()
             .OrderBy(u => u.UserName)
-            .Select(u => new HolderSummary(
-                u.Id.Value,
+            .Select(u => new
+            {
+                u.Id,
                 u.UserName,
                 u.DisplayName,
-                u.Status.ToString(),
-                u.PinHash != null,
-                u.Roles.Select(r => r.Name).ToList(),
-                _context.AssetGroups
-                    .Where(g => u.GroupMemberships.Any(m => m.AssetGroupId == g.Id))
-                    .Select(g => g.Name)
-                    .ToList()))
+                Status = u.Status.ToString(),
+                HasPin = u.PinHash != null,
+                Roles = u.Roles.Select(r => r.Name).ToList(),
+            })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        // Group names are a second query stitched in memory. Reaching AssetGroups from inside the
+        // holder projection correlates two tables that EF can only pair with APPLY, which SQLite
+        // does not have — and it throws when the screen opens, not when the query is written.
+        var memberships = await _context.Set<AssetGroupMembership>()
+            .AsNoTracking()
+            .Join(
+                _context.AssetGroups,
+                m => m.AssetGroupId,
+                g => g.Id,
+                (m, g) => new { m.UserId, g.Name })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var groupsByHolder = memberships
+            .GroupBy(m => m.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<string>)[.. g.Select(m => m.Name).OrderBy(n => n, StringComparer.Ordinal)]);
+
+        return
+        [
+            .. holders.Select(h => new HolderSummary(
+                h.Id.Value,
+                h.UserName,
+                h.DisplayName,
+                h.Status,
+                h.HasPin,
+                h.Roles,
+                groupsByHolder.TryGetValue(h.Id, out var names) ? names : [])),
+        ];
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<RoleSummary>> ListRolesAsync(

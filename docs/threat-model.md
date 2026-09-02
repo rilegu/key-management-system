@@ -1,8 +1,8 @@
 # Threat model
 
-**Status: the mitigations below describe the design. Almost none are implemented yet** — the
-README capability table says what is actually built. This document is written first so the
-controls are designed in rather than added afterwards.
+**Status: the mitigations below are implemented**, apart from those listed under known
+limitations at the end. This document was written before the controls it describes, so they were
+designed in rather than added afterwards; it has been kept in step since.
 
 ## What is being protected
 
@@ -96,4 +96,13 @@ does not:
 4. **The server host is the trust anchor.** An attacker with host access has everything.
 5. **No multi-factor authentication at a workstation.** A cabinet keypad requires a holder name
    and a PIN; a desktop sign-in is a password alone.
-6. **Single site.** No federation, no cross-site custody, no multi-writer story.
+6. **Single site.** No federation and no cross-site custody. Two processes may share the
+   database — WAL and a busy timeout make the second writer wait — but SQLite takes one writer
+   at a time, and several sites want a different store.
+7. **A split deployment weakens the live feed.** The event stream is per-process, so device
+   activity picked up by a separate gateway process does not reach clients connected to the API
+   until they reload. Running one process, which is the default, has no such gap.
+8. **Anyone who can read the installation folder can read its configuration.** Secrets are kept
+   out of it — the install script puts the signing key and the certificate password in the
+   service's own environment — but the database path, the certificate directory and the rest are
+   plainly visible.

@@ -339,7 +339,7 @@ public sealed class CabinetTlsTests : IClassFixture<CabinetGatewayApi>
     [Fact]
     public async Task A_plaintext_connection_never_becomes_a_session()
     {
-        // The whole point of the sprint. A peer that speaks the protocol but not TLS gets
+        // The whole point of authenticating the link. A peer that speaks the protocol but not TLS gets
         // nowhere, so a network attacker cannot simply frame a Hello and be believed.
         using var client = new TcpClient();
         await client.ConnectAsync("127.0.0.1", _api.GatewayPort);

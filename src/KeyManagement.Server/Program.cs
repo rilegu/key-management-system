@@ -7,9 +7,24 @@ using KeyManagement.Server;
 using KeyManagement.Server.Devices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.IdentityModel.Tokens;
 
-var builder = WebApplication.CreateBuilder(args);
+// Running as a Windows Service, the working directory is the system directory rather than the
+// installation folder, so every relative path in configuration would resolve somewhere
+// unexpected. The content root has to be set when the builder is created — changing it
+// afterwards is refused — and only when there is actually a service, so a test host keeps its
+// own root.
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : null,
+});
+
+builder.Services.AddWindowsService(options => options.ServiceName = "Key Management");
+
+var hosting = builder.Configuration.GetSection(HostingOptions.SectionName)
+    .Get<HostingOptions>() ?? new HostingOptions();
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
@@ -66,6 +81,10 @@ var gateway = builder.Configuration.GetSection(DeviceGatewayOptions.SectionName)
 var certificates = builder.Configuration.GetSection(DeviceCertificateOptions.SectionName)
     .Get<DeviceCertificateOptions>() ?? new DeviceCertificateOptions();
 
+// A process that does not run the device layer must not open its port, whatever the gateway
+// section says. The role is the deployment's intent; the section only configures it.
+gateway.Enabled = gateway.Enabled && hosting.RunsDevices;
+
 // The device authority protects the key that lets a new cabinet be enrolled. As with the
 // signing key, there is no built-in default: one would be the same key everywhere.
 if (gateway.Enabled && string.IsNullOrWhiteSpace(certificates.Password))
@@ -75,18 +94,24 @@ if (gateway.Enabled && string.IsNullOrWhiteSpace(certificates.Password))
         "Use user-secrets in development and an environment variable in deployment; never commit it.");
 }
 
+builder.Services.AddSingleton(hosting);
 builder.Services.AddSingleton(certificates);
 builder.Services.AddSingleton(gateway);
 builder.Services.AddSingleton<CabinetRegistry>();
 builder.Services.AddSingleton<ICabinetGateway>(s => s.GetRequiredService<CabinetRegistry>());
 builder.Services.AddSingleton<DeviceGatewayService>();
-builder.Services.AddHostedService(s => s.GetRequiredService<DeviceGatewayService>());
 
 var sweep = builder.Configuration.GetSection(CustodySweepOptions.SectionName)
     .Get<CustodySweepOptions>() ?? new CustodySweepOptions();
 
+sweep.Enabled = sweep.Enabled && hosting.RunsDevices;
 builder.Services.AddSingleton(sweep);
-builder.Services.AddHostedService<CustodySweepService>();
+
+if (hosting.RunsDevices)
+{
+    builder.Services.AddHostedService(s => s.GetRequiredService<DeviceGatewayService>());
+    builder.Services.AddHostedService<CustodySweepService>();
+}
 
 builder.Services.AddSignalR();
 builder.Services.AddScoped<ICustodyEventPublisher, SignalRCustodyEventPublisher>();
@@ -135,13 +160,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // Liveness only. It reports that the host is up, never that custody state is consistent —
-// a probe that consults the database would fail the host during a transient lock.
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+// a probe that consults the database would fail the host during a transient lock. Mapped in
+// every role, because a gateway-only process still has to be watchable.
+app.MapGet("/health", () => Results.Ok(new { status = "ok", role = hosting.Role.ToString() }))
    .AllowAnonymous()
    .WithName("Health");
 
-app.MapKeyManagementEndpoints();
-app.MapHub<CustodyHub>(CustodyHub.Path);
+if (hosting.RunsApi)
+{
+    app.MapKeyManagementEndpoints();
+    app.MapHub<CustodyHub>(CustodyHub.Path);
+}
 
 await app.RunAsync();
 

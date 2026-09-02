@@ -41,7 +41,8 @@ public sealed class KeyManagementClient : IKeyManagementClient, IDisposable
 
         // A refusal comes back as 401 with a populated body, so the body is read either way
         // rather than treating the status code as the whole answer.
-        var result = await ReadAsync<CommandResult<SessionResponse>>(response, cancellationToken)
+        var result = await ReadAsync<CommandResult<SessionResponse>>(
+                response, cancellationToken, bodyCarriesTheAnswer: true)
             .ConfigureAwait(false);
 
         if (result.Success && result.Data is { } session)
@@ -312,19 +313,47 @@ public sealed class KeyManagementClient : IKeyManagementClient, IDisposable
 
     private static async Task<T> ReadAsync<T>(
         HttpResponseMessage response,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool bodyCarriesTheAnswer = false)
     {
-        if (response.StatusCode is System.Net.HttpStatusCode.Forbidden)
+        // Every unsuccessful status becomes this client's own exception before the body is touched,
+        // unless the caller knows the body carries the answer. An error response is usually not
+        // JSON at all — a 500 carries an HTML page — so reading it as JSON threw a JsonException
+        // that no screen caught, and that ended the process.
+        if (!response.IsSuccessStatusCode && !bodyCarriesTheAnswer)
         {
-            throw new KeyManagementClientException(
-                "You do not have permission to do that.");
+            throw new KeyManagementClientException(Describe(response.StatusCode));
         }
 
-        var payload = await response.Content
-            .ReadFromJsonAsync<T>(Json, cancellationToken)
-            .ConfigureAwait(false);
+        T? payload;
+
+        try
+        {
+            payload = await response.Content
+                .ReadFromJsonAsync<T>(Json, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (JsonException exception)
+        {
+            throw new KeyManagementClientException(
+                "The server returned an answer this client did not understand.", exception);
+        }
 
         return payload ?? throw new KeyManagementClientException(
             "The server returned an answer this client did not understand.");
     }
+
+    private static string Describe(System.Net.HttpStatusCode status) => status switch
+    {
+        System.Net.HttpStatusCode.Forbidden => "You do not have permission to do that.",
+        System.Net.HttpStatusCode.Unauthorized => "The session has ended. Sign in again.",
+        System.Net.HttpStatusCode.NotFound => "That is no longer there. Reload and try again.",
+        System.Net.HttpStatusCode.Conflict => "Someone else changed this first. Reload and try again.",
+
+        // The number is included because it is the one thing that makes a server-side fault
+        // reportable by the person who saw it.
+        _ => string.Create(
+            CultureInfo.InvariantCulture,
+            $"The server could not complete the request ({(int)status})."),
+    };
 }

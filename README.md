@@ -1,18 +1,19 @@
-.kl# key-management-system
+# key-management-system
 
 An on-premises key and asset custody system. Physical keys are held in electronic cabinets,
 issued to authorized holders, and every issue and return is recorded in an append-only audit
 trail.
 
+![The system viewer: a cabinet's positions, the item in each, and the activity trail](image/image.png)
+
 On-premises means the system of record runs on the customer's own hardware. There is no cloud
 dependency and no third-party service in the custody path.
 
-> **Early development.** The whole custody path runs: a desktop client, an API, a database, and
-> a cabinet simulator you can start and type at. The device link is mutually authenticated, a
-> key is only in someone's custody once the cabinet says the position emptied, and overdue items
-> and unauthorized removals raise alarms an operator acknowledges. What is left is deployment:
-> service hosting and a scripted demonstration. The capability table below is exact — it says
-> what works, not what is planned.
+> **Everything below works.** A desktop client, an API, a SQLite store, and a cabinet simulator
+> you can start and type at. The device link is mutually authenticated, a key is only in
+> someone's custody once the cabinet says the position emptied, and overdue items and
+> unauthorized removals raise alarms an operator acknowledges. `scripts/demo.ps1` starts the
+> whole thing. The limitations below are real and stated plainly.
 
 ## The problem
 
@@ -83,7 +84,8 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | Overdue detection, alarms and acknowledgement | **works** |
 | Audit CSV export | **works** |
 | Administration: holders, roles, groups, items | **works** |
-| Windows Service hosting | not implemented |
+| Windows Service hosting, split deployment | **works** |
+| Scripted demonstration | **works** |
 
 ## Limitations
 
@@ -96,6 +98,9 @@ Current and by design, stated up front rather than discovered later. The full an
 - **Single site, single writer.** SQLite suits one site well and would not suit several.
 - **No offline operation.** A custody decision made without the system of record cannot be
   audited, so the client does not make one.
+- **A split deployment weakens the live feed.** The event stream is per-process, so when the
+  gateway runs separately from the API, device activity does not reach connected clients until
+  they reload. One process, the default, has no such gap.
 - **No multi-factor authentication** for the desktop client. A cabinet keypad asks for a PIN in
   addition to naming a holder, but a workstation sign-in is a password alone.
 - **Certificates are not revocable.** A lost cabinet certificate is retired by issuing another,
@@ -114,8 +119,23 @@ dotnet test
 dotnet format --verify-no-changes
 ```
 
-To run it, the server needs a signing key and an initial administrator password. Neither has a
-built-in default, because a default would be the same secret on every deployment.
+### The quickest way to see it
+
+```powershell
+powershell -File scripts/demo.ps1 -Reset
+```
+
+Windows PowerShell 5.1 is enough; PowerShell 7 (`pwsh scripts/demo.ps1 -Reset`) works too.
+
+Builds everything, creates a throwaway database under `demo/`, enrols the seeded cabinet, and
+starts the server, the simulator and the client. Sign in as `admin` with
+`correct horse battery staple`. Everything it creates is ignored by git and nothing is written
+to the machine.
+
+### Running it yourself
+
+The server needs a signing key, a certificate password and an initial administrator password.
+None has a built-in default, because a default would be the same secret on every deployment.
 
 ```bash
 cd src/KeyManagement.Server
@@ -138,6 +158,20 @@ certificate, and start the simulator:
 dotnet run --project src/KeyManagement.Server -- --issue-cabinet-certificate Reception
 dotnet run --project src/KeyManagement.DeviceSimulator -- --config simulator.json
 ```
+
+### Installing it
+
+```powershell
+# From an elevated prompt.
+powershell -File scripts/install-service.ps1 -SigningKey '<at least 32 bytes>' -CertificatePassword '<secret>'
+```
+
+Publishes, registers a Windows Service, and stores the secrets as service-scoped environment
+variables rather than writing them into a configuration file.
+
+One process runs everything by default, which is the right answer for a single site. `Hosting:Role`
+splits it into `Api` and `Gateway` processes against the same database, so cabinets stay attached
+across an API restart — at the cost noted under limitations.
 
 The simulator takes typed commands: `take A01`, `put A01`, `fault A03`,
 `pin admin 1234 A01`, `drop`, `attach`, `drops 20`, `duplicate on`, `status`. Type `help` for

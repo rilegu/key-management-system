@@ -1,6 +1,7 @@
 using KeyManagement.Application.Abstractions;
 using KeyManagement.Contracts;
 using KeyManagement.Domain;
+using KeyManagement.Domain.Access;
 using KeyManagement.Domain.Assets;
 using KeyManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -176,5 +177,54 @@ public sealed class CustodyQueriesTests
         Assert.Empty(dashboard.ActiveCheckouts);
         Assert.Single(dashboard.UncertainAssets);
         Assert.Equal(nameof(AssetCustodyState.Unknown), dashboard.UncertainAssets[0].CustodyState);
+    }
+
+    [Fact]
+    public async Task Listing_holders_carries_their_roles_and_the_groups_they_may_take_from()
+    {
+        // This is the projection that took the desktop client down: it reached AssetGroups from
+        // inside the holder projection, which EF pairs with APPLY, and SQLite has no APPLY. It
+        // compiled, shipped, and threw the moment the administration screen opened.
+        await using var database = await SeededAsync();
+
+        var holders = await QueryAsync(database, q => q.ListHoldersAsync());
+
+        var admin = Assert.Single(holders);
+        Assert.Equal("admin", admin.UserName);
+        Assert.Equal("Administrator", admin.DisplayName);
+        Assert.True(admin.HasPin);
+        Assert.Equal(["Administrator"], admin.Roles);
+        Assert.Equal(["Plant room", "Vehicles"], admin.Groups);
+    }
+
+    [Fact]
+    public async Task Listing_roles_turns_the_stored_flags_back_into_permission_names()
+    {
+        await using var database = await SeededAsync();
+
+        var roles = await QueryAsync(database, q => q.ListRolesAsync());
+
+        Assert.Equal(4, roles.Count);
+
+        var holder = roles.Single(r => r.Name == "Holder");
+        Assert.Equal([nameof(Permissions.CheckoutAsset)], holder.Permissions);
+
+        // A role carrying several flags has to come back as several names, which is the part a
+        // single-permission role would not have caught.
+        var administrator = roles.Single(r => r.Name == "Administrator");
+        Assert.Contains(nameof(Permissions.ManageUsers), administrator.Permissions);
+        Assert.True(administrator.Permissions.Count > 1);
+    }
+
+    [Fact]
+    public async Task Listing_groups_counts_the_items_in_each()
+    {
+        await using var database = await SeededAsync();
+
+        var groups = await QueryAsync(database, q => q.ListGroupsAsync());
+
+        Assert.Equal(2, groups.Count);
+        Assert.Equal(5, groups.Sum(g => g.ItemCount));
+        Assert.All(groups, g => Assert.False(string.IsNullOrWhiteSpace(g.Name)));
     }
 }
