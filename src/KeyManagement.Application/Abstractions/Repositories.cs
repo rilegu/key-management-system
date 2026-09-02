@@ -45,6 +45,44 @@ public interface ICabinetRepository
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The slot, or <see langword="null"/> if the asset is not assigned to one.</returns>
     Task<Slot?> FindSlotHoldingAsync(AssetId assetId, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds a cabinet by the name it was enrolled under.</summary>
+    /// <param name="name">The cabinet's name.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The cabinet, or <see langword="null"/> if no such cabinet is enrolled.</returns>
+    /// <remarks>
+    /// Cabinets identify themselves by name. A cabinet is enrolled by someone who typed one, and
+    /// it has no way to learn a database key.
+    /// </remarks>
+    Task<Cabinet?> FindByNameAsync(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds a cabinet and every position it holds.</summary>
+    /// <param name="cabinetId">The cabinet.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The cabinet, or <see langword="null"/>.</returns>
+    Task<Cabinet?> FindWithSlotsAsync(CabinetId cabinetId, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds one position within a cabinet.</summary>
+    /// <param name="cabinetId">The cabinet.</param>
+    /// <param name="position">The position label.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The position, or <see langword="null"/> if the cabinet has no such position.</returns>
+    Task<Slot?> FindSlotAsync(
+        CabinetId cabinetId,
+        string position,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>Keeps what cabinets actually said, before interpretation.</summary>
+/// <remarks>
+/// Written for every message, including ones discarded as already seen. When the server and a
+/// cabinet disagree about what happened, this is the only record of the cabinet's side.
+/// </remarks>
+public interface IDeviceEventLog
+{
+    /// <summary>Records a message as received.</summary>
+    /// <param name="deviceEvent">The message.</param>
+    void Record(DeviceEvent deviceEvent);
 }
 
 /// <summary>Loads and stores custody requests.</summary>

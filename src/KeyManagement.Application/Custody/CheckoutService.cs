@@ -34,6 +34,7 @@ public sealed class CheckoutService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly ICustodyEventPublisher _events;
+    private readonly ICabinetGateway _gateway;
 
     /// <summary>Creates the service.</summary>
     /// <param name="users">Holders.</param>
@@ -44,6 +45,7 @@ public sealed class CheckoutService
     /// <param name="unitOfWork">Commits the work.</param>
     /// <param name="clock">The current time.</param>
     /// <param name="events">Pushes what happened to connected clients.</param>
+    /// <param name="gateway">Sends the release to the cabinet holding the item.</param>
     public CheckoutService(
         IUserRepository users,
         IAssetRepository assets,
@@ -52,7 +54,8 @@ public sealed class CheckoutService
         IAuditTrail audit,
         IUnitOfWork unitOfWork,
         IClock clock,
-        ICustodyEventPublisher events)
+        ICustodyEventPublisher events,
+        ICabinetGateway gateway)
     {
         _users = users;
         _assets = assets;
@@ -62,6 +65,7 @@ public sealed class CheckoutService
         _unitOfWork = unitOfWork;
         _clock = clock;
         _events = events;
+        _gateway = gateway;
     }
 
     /// <summary>Judges a request to take custody of an asset.</summary>
@@ -79,6 +83,7 @@ public sealed class CheckoutService
         ArgumentNullException.ThrowIfNull(request);
 
         AuditEvent? outcome = null;
+        (CabinetId Cabinet, string Position)? release = null;
 
         var result = await _unitOfWork.InTransactionAsync(async token =>
         {
@@ -102,7 +107,7 @@ public sealed class CheckoutService
                 .About(user.Id)
                 .About(asset.Id));
 
-            if (Refuse(user, asset, slot) is { } reason)
+            if (Refuse(user, asset, slot, slot is not null && _gateway.IsAttached(slot.CabinetId)) is { } reason)
             {
                 var (refused, refusal) = await RecordRefusalAsync(
                     user, asset, slot, reason, now, correlationId, token).ConfigureAwait(false);
@@ -128,6 +133,8 @@ public sealed class CheckoutService
                 .About(asset.Id);
             _audit.Record(outcome);
 
+            release = (slot.CabinetId, slot.Position);
+
             await _unitOfWork.SaveChangesAsync(token).ConfigureAwait(false);
 
             return new CommandResult<CheckoutSummary>(
@@ -139,6 +146,16 @@ public sealed class CheckoutService
         }, cancellationToken).ConfigureAwait(false);
 
         await PublishAsync(outcome, cancellationToken).ConfigureAwait(false);
+
+        // Only now is the cabinet told. The decision is recorded first, so a release always has
+        // an authorization behind it that survives whatever the device does next.
+        if (result.Success && release is { } instruction)
+        {
+            await _gateway
+                .UnlockAsync(instruction.Cabinet, instruction.Position, correlationId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         return result;
     }
 
@@ -220,7 +237,7 @@ public sealed class CheckoutService
     /// most specific reason wins, so a suspended holder is told that rather than being told
     /// about group membership.
     /// </remarks>
-    private static string? Refuse(User user, Asset asset, Slot? slot) => user switch
+    private static string? Refuse(User user, Asset asset, Slot? slot, bool cabinetAttached) => user switch
     {
         { Status: not UserStatus.Active } =>
             "This account is not active.",
@@ -229,7 +246,12 @@ public sealed class CheckoutService
         _ when !user.CanCheckOutFrom(asset.AssetGroupId) =>
             "This asset is not in a group you may check out from.",
         _ when slot is null =>
-            "This asset is not assigned to a slot, so no cabinet can release it.",
+            "This item is not assigned to a position, so no cabinet can release it.",
+
+        // A key cannot come out of a cabinet the server cannot reach. Authorizing one anyway
+        // would leave a checkout waiting on a release that was never sent.
+        _ when !cabinetAttached =>
+            "The cabinet holding this item is not connected.",
         _ when asset.IsUncertain =>
             "This asset's whereabouts are not confirmed. It must be reconciled first.",
         _ when asset.CustodyState != AssetCustodyState.Available =>

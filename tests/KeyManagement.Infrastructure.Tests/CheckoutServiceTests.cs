@@ -157,7 +157,7 @@ public sealed class CheckoutServiceTests
     }
 
     [Fact]
-    public async Task An_asset_in_no_slot_is_refused_because_no_cabinet_can_release_it()
+    public async Task An_item_in_no_position_is_refused_because_no_cabinet_can_release_it()
     {
         var fixture = await ArrangeAsync(assignSlot: false);
         await using var _ = fixture.Database;
@@ -165,7 +165,51 @@ public sealed class CheckoutServiceTests
         var result = await RequestAsync(fixture);
 
         Assert.False(result.Success);
-        Assert.Contains("slot", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("position", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task An_item_in_a_cabinet_that_is_not_connected_is_refused()
+    {
+        // A key cannot come out of a cabinet the server cannot reach. Authorizing one anyway
+        // would leave a checkout waiting forever on a release that was never sent.
+        var fixture = await ArrangeAsync();
+        await using var _ = fixture.Database;
+
+        await using var scope = fixture.Database.CreateScope();
+        var checkouts = new CheckoutService(
+            scope.ServiceProvider.GetRequiredService<IUserRepository>(),
+            scope.ServiceProvider.GetRequiredService<IAssetRepository>(),
+            scope.ServiceProvider.GetRequiredService<ICabinetRepository>(),
+            scope.ServiceProvider.GetRequiredService<ICheckoutRepository>(),
+            scope.ServiceProvider.GetRequiredService<IAuditTrail>(),
+            scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
+            scope.ServiceProvider.GetRequiredService<IClock>(),
+            scope.ServiceProvider.GetRequiredService<ICustodyEventPublisher>(),
+            new NullCabinetGateway());
+
+        var result = await checkouts.RequestAsync(
+            new CheckoutRequest(fixture.AssetId.Value, null), fixture.UserId, CorrelationId.New());
+
+        Assert.False(result.Success);
+        Assert.Contains("not connected", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task A_permitted_request_instructs_the_cabinet_after_the_decision_is_recorded()
+    {
+        var fixture = await ArrangeAsync();
+        await using var _ = fixture.Database;
+
+        var result = await RequestAsync(fixture);
+        Assert.True(result.Success);
+
+        await using var scope = fixture.Database.CreateScope();
+        var gateway = scope.ServiceProvider.GetRequiredService<AttachedCabinetGateway>();
+
+        var unlock = Assert.Single(gateway.Unlocks);
+        Assert.Equal("A01", unlock.Position);
+        Assert.Equal(result.CorrelationId, unlock.Correlation.Value);
     }
 
     [Fact]

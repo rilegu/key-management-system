@@ -1,11 +1,14 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using KeyManagement.Application.Abstractions;
 using KeyManagement.Contracts;
 using KeyManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace KeyManagement.Server.Tests;
 
@@ -75,6 +78,24 @@ public sealed class KeyManagementApi : WebApplicationFactory<Program>, IAsyncLif
         builder.UseSetting("ConnectionStrings:KeyManagement", $"Data Source={_databasePath}");
         builder.UseSetting("Jwt:SigningKey", "test-signing-key-that-is-long-enough-for-hmac-sha256");
         builder.UseSetting("Seed:AdministratorPassword", AdministratorPassword);
+
+        // These tests are about the HTTP surface, not the wire. Custody refuses a release when
+        // the cabinet cannot be reached, so a stand-in reports the seeded cabinet as attached;
+        // CabinetGatewayTests exercises the real listener over a real socket.
+        builder.ConfigureTestServices(services =>
+            services.Replace(
+                ServiceDescriptor.Singleton<ICabinetGateway, AlwaysAttachedGateway>()));
+    }
+
+    private sealed class AlwaysAttachedGateway : ICabinetGateway
+    {
+        public bool IsAttached(Domain.CabinetId cabinetId) => true;
+
+        public Task<bool> UnlockAsync(
+            Domain.CabinetId cabinetId,
+            string position,
+            Domain.CorrelationId correlationId,
+            CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 
     /// <inheritdoc />

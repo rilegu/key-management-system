@@ -7,11 +7,11 @@ trail.
 On-premises means the system of record runs on the customer's own hardware. There is no cloud
 dependency and no third-party service in the custody path.
 
-> **Early development.** Custody works end to end across the desktop client, the API and the
-> database: sign in, see the position board, request an item, be refused if you may not have it,
-> return it, and watch the activity arrive live. Cabinet communication does not exist yet, so
-> the step where a cabinet confirms an item was physically taken has no hardware behind it. The
-> capability table below is exact — it says what works, not what is planned.
+> **Early development.** The custody loop is closed: a holder requests an item, the server
+> authorizes and instructs the cabinet, the cabinet reports the position emptying, and only then
+> is the item held by anyone. There is no cabinet simulator yet, so the other end of that link
+> is exercised by tests rather than by a program you can run. The capability table below is
+> exact — it says what works, not what is planned.
 
 ## The problem
 
@@ -75,7 +75,7 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | Audit search and correlation | **works** |
 | Desktop client: position board, items, activity | **works** |
 | Live event stream to connected clients | **works** |
-| Cabinet protocol and device gateway | not implemented |
+| Cabinet protocol, device gateway, custody reconciliation | **works** |
 | Cabinet simulator | not implemented |
 | Overdue detection and alarms | not implemented |
 | Audit CSV export | not implemented |
