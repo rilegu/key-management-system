@@ -1,0 +1,28 @@
+{
+  // Matches the cabinet and positions the server seeds on first start.
+  // Issue the certificate first:
+  //   dotnet run --project src/KeyManagement.Server -- --issue-cabinet-certificate Reception
+  "host": "127.0.0.1",
+  "port": 5610,
+  "serverName": "localhost",
+  "authorityPath": "certs/device-authority.pfx",
+  "cabinets": [
+    {
+      "name": "Reception",
+      "certificatePath": "certs/cabinet-reception.pfx",
+      "firmwareVersion": "1.4.2",
+      "positions": [
+        { "position": "A01", "occupied": true },
+        { "position": "A02", "occupied": true },
+        { "position": "A03", "occupied": true },
+        { "position": "A04", "occupied": true },
+        { "position": "A05", "occupied": true },
+        { "position": "A06", "occupied": false },
+        { "position": "A07", "occupied": false },
+        { "position": "A08", "occupied": false },
+        { "position": "A09", "occupied": false },
+        { "position": "A10", "occupied": false }
+      ]
+    }
+  ]
+}

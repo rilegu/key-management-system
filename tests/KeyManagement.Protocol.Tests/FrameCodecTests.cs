@@ -77,7 +77,7 @@ public sealed class FrameCodecTests
     [Fact]
     public async Task A_message_survives_the_round_trip()
     {
-        var sent = new Hello("Reception", "shared-secret", "1.4.2", ProtocolLimits.Version, 41);
+        var sent = new Hello("Reception", "1.4.2", ProtocolLimits.Version, 41);
 
         var stream = await WrittenAsync(MessageType.Hello, sent);
         var frame = await FrameCodec.ReadAsync(stream);
@@ -225,6 +225,32 @@ public sealed class FrameCodecTests
         Assert.NotNull(read);
         Assert.Equal((MessageType)240, read.Value.Type);
         Assert.False(Enum.IsDefined(read.Value.Type));
+    }
+
+    [Fact]
+    public async Task A_keypad_request_and_its_answer_round_trip()
+    {
+        var correlation = Guid.CreateVersion7();
+        var asked = new AccessRequest(correlation, "A01", "jsmith", "4821");
+        var answered = new AccessResult(correlation, false, "This item is not in a group you may take from.");
+
+        var request = await WrittenAsync(MessageType.AccessRequest, asked);
+        var result = await WrittenAsync(MessageType.AccessResult, answered);
+
+        Assert.Equal(asked, FrameCodec.Decode<AccessRequest>((await FrameCodec.ReadAsync(request))!.Value));
+        Assert.Equal(answered, FrameCodec.Decode<AccessResult>((await FrameCodec.ReadAsync(result))!.Value));
+    }
+
+    [Fact]
+    public void The_handshake_carries_no_secret()
+    {
+        // The connection is mutually authenticated before Hello arrives, so a credential here
+        // would add nothing and be one more thing to leak.
+        var properties = typeof(Hello).GetProperties().Select(p => p.Name).ToArray();
+
+        Assert.DoesNotContain("Credential", properties);
+        Assert.DoesNotContain("Secret", properties);
+        Assert.DoesNotContain("Password", properties);
     }
 
     [Fact]

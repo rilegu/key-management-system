@@ -12,7 +12,7 @@ namespace KeyManagement.Infrastructure.Tests;
 public sealed class SeedAndSecurityTests
 {
     private const string AdministratorPassword = "correct horse battery staple";
-    private const string CabinetCredential = "cabinet-shared-secret";
+    private const string AdministratorPin = "4821";
 
     [Fact]
     public async Task Seeding_an_empty_database_produces_a_usable_starting_state()
@@ -22,7 +22,7 @@ public sealed class SeedAndSecurityTests
         await using (var scope = database.CreateScope())
         {
             var seeded = await TemporaryDatabase.Resolve<DatabaseSeeder>(scope)
-                .SeedAsync(AdministratorPassword, CabinetCredential);
+                .SeedAsync(AdministratorPassword, AdministratorPin);
             Assert.True(seeded);
         }
 
@@ -55,13 +55,13 @@ public sealed class SeedAndSecurityTests
         await using (var first = database.CreateScope())
         {
             Assert.True(await TemporaryDatabase.Resolve<DatabaseSeeder>(first)
-                .SeedAsync(AdministratorPassword, CabinetCredential));
+                .SeedAsync(AdministratorPassword, AdministratorPin));
         }
 
         await using (var second = database.CreateScope())
         {
             Assert.False(await TemporaryDatabase.Resolve<DatabaseSeeder>(second)
-                .SeedAsync(AdministratorPassword, CabinetCredential));
+                .SeedAsync(AdministratorPassword, AdministratorPin));
         }
 
         await database.WithContextAsync(async context =>
@@ -75,7 +75,7 @@ public sealed class SeedAndSecurityTests
 
         await using (var scope = database.CreateScope())
         {
-            await TemporaryDatabase.Resolve<DatabaseSeeder>(scope).SeedAsync(AdministratorPassword, CabinetCredential);
+            await TemporaryDatabase.Resolve<DatabaseSeeder>(scope).SeedAsync(AdministratorPassword, AdministratorPin);
         }
 
         await database.WithContextAsync(async context =>

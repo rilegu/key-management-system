@@ -21,8 +21,15 @@ public static class ProtocolLimits
     /// </remarks>
     public const int MaxFrameLength = 64 * 1024;
 
-    /// <summary>The protocol version this build speaks.</summary>
-    public const int Version = 1;
+    /// <summary>
+    /// The protocol version this build speaks.
+    /// </summary>
+    /// <remarks>
+    /// Raised to 2 when the shared secret left <c>Hello</c> and the link became mutually
+    /// authenticated. A version 1 cabinet has no certificate, so there is nothing to be
+    /// compatible with — the server refuses it rather than falling back.
+    /// </remarks>
+    public const int Version = 2;
 }
 
 /// <summary>
@@ -63,6 +70,12 @@ public enum MessageType : byte
 
     /// <summary>Cabinet reports the state of every position.</summary>
     Snapshot = 10,
+
+    /// <summary>Someone at the cabinet keypad asking for an item.</summary>
+    AccessRequest = 11,
+
+    /// <summary>The server's answer to the keypad.</summary>
+    AccessResult = 12,
 }
 
 /// <summary>

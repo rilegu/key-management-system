@@ -48,9 +48,11 @@ filtered out of logs.
 **T5 · Device messages are forged, replayed, or reordered.**
 Per-cabinet monotonic sequence numbers mean a replayed event is discarded rather than applied
 twice. Correlation ids mean a replayed command is recognised as the same command.
-**Currently insufficient:** until the transport-security sprint the link is plaintext and a
-network attacker can forge a cabinet. This is the largest open weakness in the design and is
-the reason transport security is not deferred to the end.
+The link is mutually authenticated TLS. A cabinet proves itself with a client certificate this
+deployment issued, and the server proves itself in return, so a peer on the site LAN can neither
+read the traffic nor impersonate either end. The name a cabinet claims is checked against the
+name on the certificate it presented, so a valid certificate for one cabinet cannot attach as
+another.
 
 **T6 · A cabinet reports state the server did not authorize.**
 The cabinet is not the authority. A slot change with no matching authorized command is
@@ -85,12 +87,13 @@ unauthenticated connection is dropped quickly. Not a primary concern on a site L
 Stated plainly, because a security document that reads as complete is worse than one that
 does not:
 
-1. **The device link is plaintext until the transport-security sprint**, and the cabinet
-   credential is a shared secret. A network attacker on the site LAN can impersonate a
-   cabinet.
+1. **Certificates cannot be revoked.** A lost cabinet certificate is retired by issuing a
+   replacement, which changes the enrolled fingerprint and stops the old one working. There is
+   no revocation list, so a certificate stolen from a cabinet works until someone notices.
 2. **The audit trail is not tamper-evident.** Append-only is enforced by the application, not
    by the storage.
 3. **The database is not encrypted at rest.** Disk encryption is the only answer today.
 4. **The server host is the trust anchor.** An attacker with host access has everything.
-5. **No multi-factor authentication.** Password or PIN only.
+5. **No multi-factor authentication at a workstation.** A cabinet keypad requires a holder name
+   and a PIN; a desktop sign-in is a password alone.
 6. **Single site.** No federation, no cross-site custody, no multi-writer story.

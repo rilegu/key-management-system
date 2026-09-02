@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KeyManagement.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(KeyManagementDbContext))]
-    [Migration("20260901234211_CabinetCredential")]
-    partial class CabinetCredential
+    [Migration("20260902010730_CabinetCertificate")]
+    partial class CabinetCertificate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -277,8 +277,8 @@ namespace KeyManagement.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CredentialHash")
-                        .HasMaxLength(256)
+                    b.Property<string>("CertificateThumbprint")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FirmwareVersion")
@@ -307,6 +307,10 @@ namespace KeyManagement.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CertificateThumbprint")
+                        .IsUnique()
+                        .HasFilter("[CertificateThumbprint] IS NOT NULL");
 
                     b.HasIndex("Name")
                         .IsUnique();

@@ -15,7 +15,7 @@ namespace KeyManagement.Infrastructure.Tests;
 public sealed class SignInServiceTests
 {
     private const string Password = "correct horse battery staple";
-    private const string CabinetCredential = "cabinet-shared-secret";
+    private const string AdministratorPin = "4821";
 
     private static async Task<TemporaryDatabase> ArrangeAsync(
         UserStatus status = UserStatus.Active)
@@ -24,7 +24,7 @@ public sealed class SignInServiceTests
 
         await using (var scope = database.CreateScope())
         {
-            await TemporaryDatabase.Resolve<DatabaseSeeder>(scope).SeedAsync(Password, CabinetCredential);
+            await TemporaryDatabase.Resolve<DatabaseSeeder>(scope).SeedAsync(Password, AdministratorPin);
         }
 
         if (status != UserStatus.Active)

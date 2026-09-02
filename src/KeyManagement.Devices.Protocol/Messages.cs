@@ -5,16 +5,20 @@ namespace KeyManagement.Devices.Protocol;
 
 /// <summary>A cabinet asking to attach.</summary>
 /// <param name="CabinetName">The name it was enrolled under.</param>
-/// <param name="Credential">Its shared secret. Replaced by a client certificate in a later release.</param>
 /// <param name="FirmwareVersion">What it is running.</param>
 /// <param name="ProtocolVersion">The wire version it speaks.</param>
 /// <param name="LastSequenceSent">
 /// The highest sequence number it has sent. The server answers with what it actually applied, and
 /// the difference is what the cabinet replays.
 /// </param>
+/// <remarks>
+/// Carries no credential. The connection is already mutually authenticated by the time this
+/// arrives, so a secret in here would add nothing and be one more thing to leak.
+/// <paramref name="CabinetName"/> is a claim, checked against the certificate that was actually
+/// presented.
+/// </remarks>
 public sealed record Hello(
     string CabinetName,
-    string Credential,
     string FirmwareVersion,
     int ProtocolVersion,
     long LastSequenceSent);
@@ -95,3 +99,29 @@ public sealed record Snapshot(
 /// <param name="State">What the cabinet sees there.</param>
 /// <param name="At">When it last observed it.</param>
 public sealed record SlotReport(string Position, string State, DateTimeOffset At);
+
+/// <summary>Someone at the cabinet asking for an item.</summary>
+/// <param name="CorrelationId">Ties the request to the answer and to its audit records.</param>
+/// <param name="Position">The position they want.</param>
+/// <param name="UserName">Who they say they are.</param>
+/// <param name="Pin">The PIN they entered.</param>
+/// <remarks>
+/// A request, never a decision. The cabinet has a keypad, not an opinion: it forwards what was
+/// typed and does nothing until the server answers.
+/// </remarks>
+public sealed record AccessRequest(
+    Guid CorrelationId,
+    string Position,
+    string UserName,
+    string Pin);
+
+/// <summary>The server's answer to someone at the cabinet.</summary>
+/// <param name="CorrelationId">The request this answers.</param>
+/// <param name="Granted">Whether the item is being released.</param>
+/// <param name="Message">One line for the cabinet display, whether granted or refused.</param>
+/// <remarks>
+/// A refusal carries a reason worth showing on the display. When granted, an
+/// <see cref="UnlockSlot"/> follows separately, so releasing a position always travels the same
+/// path whether the request came from a keypad or a workstation.
+/// </remarks>
+public sealed record AccessResult(Guid CorrelationId, bool Granted, string Message);

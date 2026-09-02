@@ -274,8 +274,8 @@ namespace KeyManagement.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CredentialHash")
-                        .HasMaxLength(256)
+                    b.Property<string>("CertificateThumbprint")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FirmwareVersion")
@@ -304,6 +304,10 @@ namespace KeyManagement.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CertificateThumbprint")
+                        .IsUnique()
+                        .HasFilter("[CertificateThumbprint] IS NOT NULL");
 
                     b.HasIndex("Name")
                         .IsUnique();

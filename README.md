@@ -7,11 +7,10 @@ trail.
 On-premises means the system of record runs on the customer's own hardware. There is no cloud
 dependency and no third-party service in the custody path.
 
-> **Early development.** The custody loop is closed: a holder requests an item, the server
-> authorizes and instructs the cabinet, the cabinet reports the position emptying, and only then
-> is the item held by anyone. There is no cabinet simulator yet, so the other end of that link
-> is exercised by tests rather than by a program you can run. The capability table below is
-> exact — it says what works, not what is planned.
+> **Early development.** The whole custody path runs: a desktop client, an API, a database, and
+> a cabinet simulator you can start and type at. The device link is mutually authenticated, and
+> a key is only in someone's custody once the cabinet says the position emptied. The capability
+> table below is exact — it says what works, not what is planned.
 
 ## The problem
 
@@ -76,10 +75,11 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 | Desktop client: position board, items, activity | **works** |
 | Live event stream to connected clients | **works** |
 | Cabinet protocol, device gateway, custody reconciliation | **works** |
-| Cabinet simulator | not implemented |
+| Cabinet simulator, with fault injection | **works** |
+| TLS and mutual authentication on the device link | **works** |
+| Cabinet keypad: PIN request at the cabinet | **works** |
 | Overdue detection and alarms | not implemented |
 | Audit CSV export | not implemented |
-| TLS and mutual authentication on the device link | not implemented |
 | Windows Service hosting | not implemented |
 
 ## Limitations
@@ -87,16 +87,16 @@ make a duplicated event harmless; correlation ids make a retried command the sam
 Current and by design, stated up front rather than discovered later. The full analysis is in
 [`docs/threat-model.md`](docs/threat-model.md).
 
-- **The device link will be plaintext when it first ships**, with a shared secret per cabinet.
-  TLS with mutual certificates replaces both in the transport-security sprint. Until then a
-  network attacker on the site LAN can impersonate a cabinet.
 - **The audit trail is append-only by application policy, not tamper-evident.** Anyone with
   the database file can rewrite it.
 - **The database is not encrypted at rest.** Disk encryption is the answer today.
 - **Single site, single writer.** SQLite suits one site well and would not suit several.
 - **No offline operation.** A custody decision made without the system of record cannot be
   audited, so the client does not make one.
-- **No multi-factor authentication.**
+- **No multi-factor authentication** for the desktop client. A cabinet keypad asks for a PIN in
+  addition to naming a holder, but a workstation sign-in is a password alone.
+- **Certificates are not revocable.** A lost cabinet certificate is retired by issuing another,
+  which changes the enrolled fingerprint. There is no revocation list.
 
 The cabinet protocol is original to this project. It is not compatible with any commercial
 cabinet and does not attempt to be; the simulator is the reference device.
@@ -118,6 +118,7 @@ built-in default, because a default would be the same secret on every deployment
 cd src/KeyManagement.Server
 dotnet user-secrets set "Jwt:SigningKey" "<at least 32 bytes>"
 dotnet user-secrets set "Seed:AdministratorPassword" "<initial password>"
+dotnet user-secrets set "DeviceCertificates:Password" "<protects the private keys>"
 dotnet run
 
 # in another shell
@@ -126,6 +127,19 @@ dotnet run --project src/KeyManagement.Desktop -- --server https://localhost:718
 
 The database is created and seeded on first start: four roles, two item groups, five items and
 a ten-position cabinet.
+
+To run a cabinet against it, enable the gateway (`DeviceGateway:Enabled`), issue the cabinet a
+certificate, and start the simulator:
+
+```bash
+dotnet run --project src/KeyManagement.Server -- --issue-cabinet-certificate Reception
+dotnet run --project src/KeyManagement.DeviceSimulator -- --config simulator.json
+```
+
+The simulator takes typed commands: `take A01`, `put A01`, `fault A03`,
+`pin admin 1234 A01`, `drop`, `attach`, `drops 20`, `duplicate on`, `status`. Type `help` for
+the rest. Dropping the link, moving a position while it is down and reattaching is the quickest
+way to watch custody reconcile.
 
 ## Layout
 
