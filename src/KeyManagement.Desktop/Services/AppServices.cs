@@ -33,6 +33,12 @@ public enum Destination
     /// <summary>The activity trail.</summary>
     Activity = 2,
 
+    /// <summary>Things an operator is expected to look at.</summary>
+    Alarms = 4,
+
+    /// <summary>Holders, groups and items.</summary>
+    Administration = 5,
+
     /// <summary>Sign-in.</summary>
     SignIn = 3,
 }

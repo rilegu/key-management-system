@@ -286,6 +286,227 @@ public sealed class ItemsViewModelTests
 }
 
 /// <summary>
+/// The alarm list.
+/// </summary>
+public sealed class AlarmsViewModelTests
+{
+    private static AlarmSummary Alarm(string type, string severity, string status) =>
+        new(Guid.CreateVersion7(), type, severity, status, $"{type} happened.",
+            DateTimeOffset.UtcNow, Guid.CreateVersion7(), null, "PR-001", null, null, null);
+
+    [Fact]
+    public async Task Outstanding_only_hides_what_has_been_dealt_with()
+    {
+        var client = new FakeKeyManagementClient();
+        client.Alarms.Add(Alarm("OverdueItem", "Warning", "Active"));
+        client.Alarms.Add(Alarm("PositionFault", "Warning", "Acknowledged"));
+
+        var screen = new AlarmsViewModel(client, new RecordingNotifications());
+        await screen.LoadAsync();
+
+        Assert.Single(screen.Alarms);
+
+        screen.ActiveOnly = false;
+        await screen.LoadAsync();
+
+        Assert.Equal(2, screen.Alarms.Count);
+    }
+
+    [Fact]
+    public async Task Severity_reaches_the_row_as_a_style_class()
+    {
+        // Colour is chosen here, never in the view, so both themes follow without a template
+        // knowing anything about alarms.
+        var client = new FakeKeyManagementClient();
+        client.Alarms.Add(Alarm("UnauthorizedRemoval", "Critical", "Active"));
+        client.Alarms.Add(Alarm("OverdueItem", "Warning", "Active"));
+        client.Alarms.Add(Alarm("UncollectedRelease", "Information", "Active"));
+
+        var screen = new AlarmsViewModel(client, new RecordingNotifications());
+        await screen.LoadAsync();
+
+        Assert.True(screen.Alarms.Single(a => a.What == "Unauthorised removal").IsCritical);
+        Assert.True(screen.Alarms.Single(a => a.What == "Overdue item").IsWarning);
+        Assert.True(screen.Alarms.Single(a => a.What == "Released, not collected").IsInformation);
+    }
+
+    [Fact]
+    public async Task Acknowledging_tells_the_server_and_reloads()
+    {
+        // The reload is the part worth asserting. A command that acts and then refreshes runs
+        // the shared async helper twice, and an earlier version of it refused the inner call —
+        // so the server was told and the screen never changed.
+        var client = new FakeKeyManagementClient();
+        client.Alarms.Add(Alarm("OverdueItem", "Warning", "Active"));
+
+        var notifications = new RecordingNotifications();
+        var screen = new AlarmsViewModel(client, notifications);
+        await screen.LoadAsync();
+        Assert.Single(screen.Alarms);
+
+        var acknowledged = screen.Alarms[0];
+        client.Alarms.Clear();
+
+        await screen.AcknowledgeAsync(acknowledged);
+
+        Assert.Single(client.Acknowledged);
+        Assert.Single(notifications.Successes);
+        Assert.Empty(screen.Alarms);
+    }
+
+    [Fact]
+    public async Task An_empty_list_says_so_rather_than_showing_nothing()
+    {
+        var screen = new AlarmsViewModel(new FakeKeyManagementClient(), new RecordingNotifications());
+
+        await screen.LoadAsync();
+
+        Assert.Equal("Nothing outstanding.", screen.ResultSummary);
+    }
+}
+
+/// <summary>
+/// Holders, groups and items.
+/// </summary>
+public sealed class AdministrationViewModelTests
+{
+    private static FakeKeyManagementClient Seeded()
+    {
+        var client = new FakeKeyManagementClient();
+        client.HolderList.Add(new HolderSummary(
+            Guid.CreateVersion7(), "admin", "Administrator", "Active", true,
+            ["Administrator"], ["Plant room"]));
+        client.HolderList.Add(new HolderSummary(
+            Guid.CreateVersion7(), "jsmith", "J Smith", "Suspended", false, [], []));
+        client.GroupList.Add(new AssetGroupSummary(Guid.CreateVersion7(), "Plant room", null, 3));
+        return client;
+    }
+
+    [Fact]
+    public async Task Holders_show_what_each_has_been_granted()
+    {
+        var screen = new AdministrationViewModel(Seeded(), new RecordingNotifications());
+
+        await screen.LoadAsync();
+
+        var admin = screen.Holders.Single(h => h.UserName == "admin");
+        Assert.True(admin.IsActive);
+        Assert.Equal("PIN set", admin.Keypad);
+        Assert.Equal("Plant room", admin.Groups);
+
+        // Nothing granted reads as a dash rather than as blank, so an empty cell is never
+        // mistaken for a column that failed to load.
+        var other = screen.Holders.Single(h => h.UserName == "jsmith");
+        Assert.False(other.IsActive);
+        Assert.Equal("—", other.Roles);
+        Assert.Equal("—", other.Keypad);
+    }
+
+    [Fact]
+    public async Task Suspending_sends_the_opposite_of_the_current_status()
+    {
+        var client = Seeded();
+        var screen = new AdministrationViewModel(client, new RecordingNotifications());
+        await screen.LoadAsync();
+
+        await screen.ToggleStatusAsync(screen.Holders.Single(h => h.UserName == "admin"));
+        await screen.ToggleStatusAsync(screen.Holders.Single(h => h.UserName == "jsmith"));
+
+        Assert.Equal("Suspended", client.StatusChanges[0].Status);
+        Assert.Equal("Active", client.StatusChanges[1].Status);
+    }
+
+    [Fact]
+    public async Task Granting_a_group_needs_both_a_holder_and_a_group()
+    {
+        var client = Seeded();
+        var screen = new AdministrationViewModel(client, new RecordingNotifications());
+        await screen.LoadAsync();
+
+        // No holder chosen yet.
+        await screen.GrantGroupAsync();
+        Assert.Empty(client.GroupChanges);
+
+        screen.SelectedHolder = screen.Holders.Single(h => h.UserName == "jsmith");
+        await screen.GrantGroupAsync();
+
+        var change = Assert.Single(client.GroupChanges);
+        Assert.True(change.Granted);
+        Assert.Equal(screen.SelectedHolder.Id, change.Holder);
+    }
+
+    [Fact]
+    public async Task Withdrawing_a_group_sends_the_opposite_of_granting()
+    {
+        var client = Seeded();
+        var screen = new AdministrationViewModel(client, new RecordingNotifications());
+        await screen.LoadAsync();
+        screen.SelectedHolder = screen.Holders[0];
+
+        await screen.WithdrawGroupAsync();
+
+        Assert.False(Assert.Single(client.GroupChanges).Granted);
+    }
+
+    [Fact]
+    public async Task A_refused_creation_keeps_what_was_typed()
+    {
+        // The usual reason is a name already taken, and retyping the rest helps nobody.
+        var client = Seeded();
+        client.AdministrationResult = new CommandResult(
+            false, "'jsmith' is already taken.", Guid.CreateVersion7(), "Denied");
+
+        var notifications = new RecordingNotifications();
+        var screen = new AdministrationViewModel(client, notifications)
+        {
+            NewUserName = "jsmith",
+            NewDisplayName = "J Smith",
+            NewPassword = "secret",
+        };
+
+        await screen.CreateHolderAsync();
+
+        Assert.Equal("jsmith", screen.NewUserName);
+        Assert.Equal("secret", screen.NewPassword);
+        Assert.Single(notifications.Problems);
+    }
+
+    [Fact]
+    public async Task A_created_holder_clears_the_fields_and_appears_in_the_list()
+    {
+        var client = Seeded();
+        var screen = new AdministrationViewModel(client, new RecordingNotifications())
+        {
+            NewUserName = "anewbie",
+            NewPassword = "secret",
+        };
+
+        await screen.CreateHolderAsync();
+
+        Assert.Equal(string.Empty, screen.NewUserName);
+        Assert.Equal(string.Empty, screen.NewPassword);
+        Assert.Contains(screen.Holders, h => h.UserName == "anewbie");
+    }
+
+    [Fact]
+    public async Task An_item_needs_a_group_chosen_first()
+    {
+        var client = new FakeKeyManagementClient();
+        var notifications = new RecordingNotifications();
+        var screen = new AdministrationViewModel(client, notifications)
+        {
+            NewItemReference = "PR-004",
+            NewItemDescription = "A door",
+        };
+
+        await screen.LoadAsync();
+        await screen.CreateItemAsync();
+
+        Assert.Single(notifications.Problems);
+    }
+}
+
+/// <summary>
 /// How the application shuts down.
 /// </summary>
 public sealed class ShutdownTests

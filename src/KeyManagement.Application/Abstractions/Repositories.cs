@@ -107,6 +107,15 @@ public interface ICheckoutRepository
     /// picking between candidates.
     /// </remarks>
     Task<Checkout?> FindOpenForAssetAsync(AssetId assetId, CancellationToken cancellationToken = default);
+
+    /// <summary>Every checkout that has not settled.</summary>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>Pending, active and overdue checkouts.</returns>
+    /// <remarks>
+    /// What the sweep walks. Bounded by how much is out at once rather than by how much has
+    /// ever happened, so it stays small however long the system has been running.
+    /// </remarks>
+    Task<IReadOnlyList<Checkout>> ListOpenAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>Issues, finds and revokes refresh tokens.</summary>

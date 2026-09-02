@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using KeyManagement.Application.Abstractions;
+using KeyManagement.Application.Administration;
+using KeyManagement.Application.Alarms;
 using KeyManagement.Application.Authentication;
 using KeyManagement.Application.Custody;
 using KeyManagement.Contracts;
@@ -28,6 +30,7 @@ public static class Endpoints
         MapAuthentication(app);
         MapCustody(app);
         MapReads(app);
+        MapAdministration(app);
 
         return app;
     }
@@ -112,6 +115,93 @@ public static class Endpoints
             .WithSummary("List what is currently out.");
     }
 
+    private static void MapAdministration(WebApplication app)
+    {
+        // Everything behind one policy. These are the changes that decide what everyone else
+        // may do, so the bar for reaching any of them is the same.
+        var admin = app.MapGroup("/api")
+            .RequireAuthorization(Authorization.CanManageUsers)
+            .WithTags("Administration");
+
+        admin.MapGet("/users", async (ICustodyQueries queries, CancellationToken cancellationToken) =>
+                Results.Ok(await queries.ListHoldersAsync(cancellationToken)))
+            .WithName("ListHolders")
+            .WithSummary("List holders and what each has been granted.");
+
+        admin.MapGet("/roles", async (ICustodyQueries queries, CancellationToken cancellationToken) =>
+                Results.Ok(await queries.ListRolesAsync(cancellationToken)))
+            .WithName("ListRoles")
+            .WithSummary("List roles and what they allow.");
+
+        admin.MapGet("/asset-groups", async (ICustodyQueries queries, CancellationToken cancellationToken) =>
+                Results.Ok(await queries.ListGroupsAsync(cancellationToken)))
+            .WithName("ListGroups")
+            .WithSummary("List item groups.");
+
+        admin.MapPost("/users", async (
+                CreateHolderRequest request,
+                ClaimsPrincipal caller,
+                AdministrationService administration,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await administration.CreateHolderAsync(
+                    request, caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .WithName("CreateHolder")
+            .WithSummary("Create a holder.");
+
+        admin.MapPatch("/users/{id:guid}", async (
+                Guid id,
+                AmendHolderRequest request,
+                ClaimsPrincipal caller,
+                AdministrationService administration,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await administration.AmendHolderAsync(
+                    new UserId(id), request, caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .WithName("AmendHolder")
+            .WithSummary("Change a holder's name or status.");
+
+        admin.MapPost("/users/{id:guid}/roles", async (
+                Guid id,
+                GrantRequest request,
+                ClaimsPrincipal caller,
+                AdministrationService administration,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await administration.SetRoleAsync(
+                    new UserId(id), request, caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .WithName("SetHolderRole")
+            .WithSummary("Grant or withdraw a role.");
+
+        admin.MapPost("/users/{id:guid}/groups", async (
+                Guid id,
+                GrantRequest request,
+                ClaimsPrincipal caller,
+                AdministrationService administration,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await administration.SetGroupAsync(
+                    new UserId(id), request, caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .WithName("SetHolderGroup")
+            .WithSummary("Grant or withdraw access to an item group.");
+
+        admin.MapPost("/asset-groups", async (
+                CreateGroupRequest request,
+                ClaimsPrincipal caller,
+                AdministrationService administration,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await administration.CreateGroupAsync(
+                    request, caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .WithName("CreateGroup")
+            .WithSummary("Create an item group.");
+
+        admin.MapPost("/assets", async (
+                CreateItemRequest request,
+                ClaimsPrincipal caller,
+                AdministrationService administration,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await administration.CreateItemAsync(
+                    request, caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .WithName("CreateItem")
+            .WithSummary("Create an item.");
+    }
+
     private static void MapReads(WebApplication app)
     {
         var api = app.MapGroup("/api").RequireAuthorization().WithTags("Custody");
@@ -152,6 +242,41 @@ public static class Endpoints
             })
             .WithName("GetCabinetSnapshot")
             .WithSummary("Read one cabinet slot by slot.");
+
+        api.MapGet("/alarms", async (
+                bool? activeOnly,
+                ICustodyQueries queries,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await queries.ListAlarmsAsync(activeOnly ?? true, cancellationToken)))
+            .WithName("ListAlarms")
+            .WithSummary("List alarms, active ones by default.");
+
+        api.MapPost("/alarms/{id:guid}/acknowledge", async (
+                Guid id,
+                ClaimsPrincipal caller,
+                AlarmService alarms,
+                CancellationToken cancellationToken) =>
+                Results.Ok(await alarms.AcknowledgeAsync(
+                    new AlarmId(id), caller.RequireUserId(), CorrelationId.New(), cancellationToken)))
+            .RequireAuthorization(Authorization.CanAcknowledgeAlarms)
+            .WithName("AcknowledgeAlarm")
+            .WithSummary("Record that someone has seen an alarm.");
+
+        api.MapGet("/audit-events/export", async (
+                [AsParameters] AuditQueryParameters parameters,
+                ICustodyQueries queries,
+                CancellationToken cancellationToken) =>
+            {
+                var csv = await queries.ExportAuditAsync(parameters.ToQuery(), cancellationToken);
+
+                // Named with the moment it was taken. An export is evidence, and evidence that
+                // cannot be told apart from another export is worth less.
+                var name = $"audit-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.csv";
+                return Results.File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", name);
+            })
+            .RequireAuthorization(Authorization.CanViewAudit)
+            .WithName("ExportAuditEvents")
+            .WithSummary("Download the audit trail as comma-separated values.");
 
         api.MapGet("/audit-events", async (
                 [AsParameters] AuditQueryParameters parameters,

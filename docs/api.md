@@ -1,7 +1,7 @@
 # HTTP API
 
-**Status: the authentication, custody and audit endpoints below are built. Administration,
-alarms and CSV export are not** — see the capability table in the README.
+**Status: implemented.** Every endpoint below is built, apart from cabinet creation, which is
+still a command-line act.
 
 The server is the authoritative boundary. Everything the desktop client can do, it does
 through this surface, and every rule is enforced here rather than in the client.
@@ -55,14 +55,20 @@ and timing as an unknown account — enumerating valid holders should not be fre
 
 | Method | Path | Purpose |
 | ------ | ---- | ------- |
-Not built yet.
-
 | `GET` `POST` | `/api/users` | List and create holders |
 | `PATCH` | `/api/users/{id}` | Amend a holder |
 | `GET` `POST` | `/api/assets` | List and create assets |
 | `GET` | `/api/alarms?status=active` | Active alarms |
 | `POST` | `/api/alarms/{id}/acknowledge` | Acknowledge an alarm |
 | `GET` | `/api/audit-events/export` | CSV export |
+| `POST` | `/api/users/{id}/roles` | Grant or withdraw a role |
+| `POST` | `/api/users/{id}/groups` | Grant or withdraw access to an item group |
+| `GET` `POST` | `/api/asset-groups` | List and create item groups |
+| `GET` | `/api/roles` | List roles and what they allow |
+
+Administration sits behind one policy, `ManageUsers`. These are the changes that decide what
+everyone else may do, so the bar for reaching any of them is the same. Nothing here deletes: a
+holder is suspended rather than removed, so every audit record keeps a subject it can name.
 
 ## Live events
 

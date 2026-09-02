@@ -94,6 +94,18 @@
             </StackPanel>
           </RadioButton>
 
+          <RadioButton Classes="nav" GroupName="nav"
+                       IsChecked="{Binding IsOnAlarms, Mode=OneWay}"
+                       Command="{Binding ShowAlarmsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Classes="icon"
+                    Data="{StaticResource AlertIcon}"
+                    Fill="{Binding $parent[RadioButton].Foreground}" />
+              <TextBlock Text="Alarms" VerticalAlignment="Center"
+                         Foreground="{Binding $parent[RadioButton].Foreground}" />
+            </StackPanel>
+          </RadioButton>
+
           <TextBlock Classes="label" Text="MANAGE" Margin="20,16,0,8" />
           <RadioButton Classes="nav" GroupName="nav"
                        IsChecked="{Binding IsOnItems, Mode=OneWay}"
@@ -114,6 +126,17 @@
                     Data="{StaticResource ActivityIcon}"
                     Fill="{Binding $parent[RadioButton].Foreground}" />
               <TextBlock Text="Activity" VerticalAlignment="Center"
+                         Foreground="{Binding $parent[RadioButton].Foreground}" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton Classes="nav" GroupName="nav"
+                       IsChecked="{Binding IsOnAdministration, Mode=OneWay}"
+                       Command="{Binding ShowAdministrationCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Path Classes="icon"
+                    Data="{StaticResource HoldersIcon}"
+                    Fill="{Binding $parent[RadioButton].Foreground}" />
+              <TextBlock Text="Holders and items" VerticalAlignment="Center"
                          Foreground="{Binding $parent[RadioButton].Foreground}" />
             </StackPanel>
           </RadioButton>

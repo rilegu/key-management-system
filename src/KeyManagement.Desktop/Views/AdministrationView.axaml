@@ -1,0 +1,151 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KeyManagement.Desktop.ViewModels"
+             xmlns:contracts="using:KeyManagement.Contracts"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1240" d:DesignHeight="840"
+             x:Class="KeyManagement.Desktop.Views.AdministrationView"
+             x:DataType="vm:AdministrationViewModel">
+
+  <ScrollViewer>
+    <StackPanel Margin="20" Spacing="14">
+
+      <!-- Create a holder -->
+      <Border Classes="card">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="subtitle" Text="Add a holder" />
+          <Grid ColumnDefinitions="*,*,*,*,Auto" >
+            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+              <TextBlock Classes="label" Text="USER NAME" />
+              <TextBox Text="{Binding NewUserName}" PlaceholderText="jsmith" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Margin="0,0,12,0">
+              <TextBlock Classes="label" Text="DISPLAY NAME" />
+              <TextBox Text="{Binding NewDisplayName}" PlaceholderText="J Smith" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Margin="0,0,12,0">
+              <TextBlock Classes="label" Text="PASSWORD" />
+              <TextBox Text="{Binding NewPassword}" PasswordChar="•" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" Margin="0,0,12,0">
+              <TextBlock Classes="label" Text="CABINET PIN (OPTIONAL)" />
+              <TextBox Text="{Binding NewPin}" PasswordChar="•" Margin="0,4,0,0" />
+            </StackPanel>
+            <Button Grid.Column="4" Classes="primary" Content="Create"
+                    VerticalAlignment="Bottom"
+                    Command="{Binding CreateHolderCommand}" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Holders -->
+      <Border Classes="panel">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <Border Grid.Row="0" Classes="tableHeader">
+            <Grid ColumnDefinitions="140,180,110,100,*,*,120">
+              <TextBlock Grid.Column="0" Text="USER NAME" />
+              <TextBlock Grid.Column="1" Text="DISPLAY NAME" />
+              <TextBlock Grid.Column="2" Text="STATUS" />
+              <TextBlock Grid.Column="3" Text="KEYPAD" />
+              <TextBlock Grid.Column="4" Text="ROLES" />
+              <TextBlock Grid.Column="5" Text="GROUPS" />
+              <TextBlock Grid.Column="6" Text="" />
+            </Grid>
+          </Border>
+
+          <ListBox Grid.Row="1"
+                   ItemsSource="{Binding Holders}"
+                   SelectedItem="{Binding SelectedHolder}"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   MaxHeight="320">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:HolderRowViewModel">
+                <Grid ColumnDefinitions="140,180,110,100,*,*,120">
+                  <TextBlock Grid.Column="0" Classes="mono" Text="{Binding UserName}"
+                             FontWeight="SemiBold" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+
+                  <Border Grid.Column="2" Classes="chip"
+                          Classes.in="{Binding IsActive}"
+                          Classes.fault="{Binding !IsActive}">
+                    <TextBlock Text="{Binding Status}" />
+                  </Border>
+
+                  <TextBlock Grid.Column="3" Classes="caption" Text="{Binding Keypad}"
+                             VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="4" Classes="caption" Text="{Binding Roles}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="5" Classes="caption" Text="{Binding Groups}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+
+                  <Button Grid.Column="6" Classes="secondary" Padding="10,4"
+                          HorizontalAlignment="Right" VerticalAlignment="Center"
+                          Content="{Binding IsActive, Converter={x:Static vm:AdministrationConverters.SuspendOrReinstate}}"
+                          Command="{Binding $parent[ListBox].((vm:AdministrationViewModel)DataContext).ToggleStatusCommand}"
+                          CommandParameter="{Binding}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <!-- Grants, groups and items -->
+      <Grid ColumnDefinitions="*,*">
+
+        <Border Grid.Column="0" Classes="card" Margin="0,0,7,0">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="subtitle" Text="Group access" />
+            <TextBlock Classes="caption"
+                       TextWrapping="Wrap"
+                       Text="Holding the checkout permission is not enough on its own. A holder may only take items in the groups granted to them." />
+
+            <TextBlock Classes="label" Text="GROUP" />
+            <ComboBox ItemsSource="{Binding Groups}"
+                      SelectedItem="{Binding SelectedGroup}"
+                      HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="contracts:AssetGroupSummary">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Classes="primary" Content="Grant to selected holder"
+                      Command="{Binding GrantGroupCommand}" />
+              <Button Classes="secondary" Content="Withdraw"
+                      Command="{Binding WithdrawGroupCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="1" Classes="card" Margin="7,0,0,0">
+          <StackPanel Spacing="12">
+            <TextBlock Classes="subtitle" Text="Groups and items" />
+
+            <TextBlock Classes="label" Text="NEW GROUP" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0" Text="{Binding NewGroupName}" PlaceholderText="Plant room" />
+              <Button Grid.Column="1" Classes="secondary" Content="Add" Margin="8,0,0,0"
+                      Command="{Binding CreateGroupCommand}" />
+            </Grid>
+
+            <TextBlock Classes="label" Text="NEW ITEM IN THE SELECTED GROUP" Margin="0,6,0,0" />
+            <Grid ColumnDefinitions="*,2*,Auto">
+              <TextBox Grid.Column="0" Text="{Binding NewItemReference}" PlaceholderText="PR-004" />
+              <TextBox Grid.Column="1" Text="{Binding NewItemDescription}"
+                       PlaceholderText="What it opens" Margin="8,0,0,0" />
+              <Button Grid.Column="2" Classes="secondary" Content="Add" Margin="8,0,0,0"
+                      Command="{Binding CreateItemCommand}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </Grid>
+
+    </StackPanel>
+  </ScrollViewer>
+
+</UserControl>

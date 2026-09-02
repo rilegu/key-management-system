@@ -1,6 +1,7 @@
 using KeyManagement.Application.Abstractions;
 using KeyManagement.Domain;
 using KeyManagement.Domain.Access;
+using KeyManagement.Domain.Alarms;
 using KeyManagement.Domain.Assets;
 using KeyManagement.Domain.Auditing;
 using KeyManagement.Domain.Cabinets;
@@ -122,6 +123,15 @@ public sealed class CheckoutRepository : ICheckoutRepository
         _context.Checkouts.SingleOrDefaultAsync(c => c.Id == id, cancellationToken);
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<Checkout>> ListOpenAsync(
+        CancellationToken cancellationToken = default) =>
+        await _context.Checkouts
+            .Where(c => OpenStates.Contains(c.State))
+            .OrderBy(c => c.RequestedAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public Task<Checkout?> FindOpenForAssetAsync(
         AssetId assetId,
         CancellationToken cancellationToken = default) =>
@@ -148,6 +158,62 @@ public sealed class RefreshTokenStore : IRefreshTokenStore
         string tokenHash,
         CancellationToken cancellationToken = default) =>
         _context.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken);
+}
+
+/// <summary>The things an administrator creates and amends.</summary>
+public sealed class AdministrationStore : IAdministrationStore
+{
+    private readonly KeyManagementDbContext _context;
+
+    /// <summary>Creates the store.</summary>
+    /// <param name="context">The database.</param>
+    public AdministrationStore(KeyManagementDbContext context) => _context = context;
+
+    /// <inheritdoc />
+    public void Add(User user) => _context.Users.Add(user);
+
+    /// <inheritdoc />
+    public void Add(AssetGroup group) => _context.AssetGroups.Add(group);
+
+    /// <inheritdoc />
+    public void Add(Asset asset) => _context.Assets.Add(asset);
+
+    /// <inheritdoc />
+    public Task<Role?> FindRoleAsync(RoleId id, CancellationToken cancellationToken = default) =>
+        _context.Roles.SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<AssetGroup?> FindGroupAsync(
+        AssetGroupId id,
+        CancellationToken cancellationToken = default) =>
+        _context.AssetGroups.SingleOrDefaultAsync(g => g.Id == id, cancellationToken);
+}
+
+/// <summary>Raises and finds alarms.</summary>
+public sealed class AlarmRepository : IAlarmRepository
+{
+    private readonly KeyManagementDbContext _context;
+
+    /// <summary>Creates the repository.</summary>
+    /// <param name="context">The database.</param>
+    public AlarmRepository(KeyManagementDbContext context) => _context = context;
+
+    /// <inheritdoc />
+    public void Add(Alarm alarm) => _context.Alarms.Add(alarm);
+
+    /// <inheritdoc />
+    public Task<Alarm?> FindByIdAsync(AlarmId id, CancellationToken cancellationToken = default) =>
+        _context.Alarms.SingleOrDefaultAsync(a => a.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<bool> IsActiveAsync(string scope, CancellationToken cancellationToken = default) =>
+        _context.Alarms.AnyAsync(
+            a => a.Scope == scope && a.Status == AlarmStatus.Active, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Alarm?> FindActiveAsync(string scope, CancellationToken cancellationToken = default) =>
+        _context.Alarms.SingleOrDefaultAsync(
+            a => a.Scope == scope && a.Status == AlarmStatus.Active, cancellationToken);
 }
 
 /// <summary>Appends to the audit trail.</summary>

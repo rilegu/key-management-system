@@ -1,4 +1,6 @@
 using KeyManagement.Application.Abstractions;
+using KeyManagement.Application.Administration;
+using KeyManagement.Application.Alarms;
 using KeyManagement.Application.Authentication;
 using KeyManagement.Application.Custody;
 using KeyManagement.Application.Devices;
@@ -47,6 +49,8 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<ICheckoutRepository, CheckoutRepository>();
         services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
         services.AddScoped<IAuditTrail, AuditTrail>();
+        services.AddScoped<IAlarmRepository, AlarmRepository>();
+        services.AddScoped<IAdministrationStore, AdministrationStore>();
         services.AddScoped<IDeviceEventLog, DeviceEventLog>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ICustodyQueries, CustodyQueries>();
@@ -69,6 +73,9 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<SignInService>();
         services.AddScoped<CheckoutService>();
         services.AddScoped<CabinetEventService>();
+        services.AddScoped<AlarmService>();
+        services.AddScoped<AdministrationService>();
+        services.AddScoped<CustodySweep>();
 
         // Only added if the host has not supplied a real transport, so the server's
         // SignalR publisher wins wherever one is registered.

@@ -44,3 +44,30 @@ public sealed record DashboardSummary(
     IReadOnlyList<CheckoutSummary> ActiveCheckouts,
     IReadOnlyList<AssetSummary> UncertainAssets,
     IReadOnlyList<AuditEventSummary> RecentEvents);
+
+/// <summary>Something an operator is expected to look at.</summary>
+/// <param name="Id">Identifies the alarm.</param>
+/// <param name="Type">What it is about.</param>
+/// <param name="Severity">How much it matters.</param>
+/// <param name="Status">Whether anyone has dealt with it.</param>
+/// <param name="Summary">One line for whoever deals with it.</param>
+/// <param name="RaisedAt">When it was raised, UTC.</param>
+/// <param name="CorrelationId">Ties it to the audit records around it.</param>
+/// <param name="AssetId">The item involved, when there was one.</param>
+/// <param name="AssetReference">That item's label.</param>
+/// <param name="CabinetId">The cabinet involved, when there was one.</param>
+/// <param name="AcknowledgedAt">When it was acknowledged, UTC.</param>
+/// <param name="AcknowledgedBy">Who acknowledged it.</param>
+public sealed record AlarmSummary(
+    Guid Id,
+    string Type,
+    string Severity,
+    string Status,
+    string Summary,
+    DateTimeOffset RaisedAt,
+    Guid CorrelationId,
+    Guid? AssetId,
+    string? AssetReference,
+    Guid? CabinetId,
+    DateTimeOffset? AcknowledgedAt,
+    string? AcknowledgedBy);

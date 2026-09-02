@@ -16,6 +16,8 @@ namespace KeyManagement.Desktop.ViewModels;
 /// </remarks>
 public abstract partial class ViewModelBase : ObservableValidator
 {
+    private int _depth;
+
     /// <summary>Whether work is in flight. Bound to disable commands and show progress.</summary>
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
@@ -40,13 +42,16 @@ public abstract partial class ViewModelBase : ObservableValidator
     {
         ArgumentNullException.ThrowIfNull(work);
 
-        if (IsBusy)
-        {
-            return;
-        }
-
+        // Nesting is counted rather than refused. A command that acts and then reloads calls
+        // this twice, and rejecting the inner call would make the reload silently do nothing —
+        // which looked exactly like a screen that had not refreshed.
+        _depth++;
         IsBusy = true;
-        ErrorMessage = null;
+
+        if (_depth == 1)
+        {
+            ErrorMessage = null;
+        }
 
         try
         {
@@ -62,7 +67,8 @@ public abstract partial class ViewModelBase : ObservableValidator
         }
         finally
         {
-            IsBusy = false;
+            _depth--;
+            IsBusy = _depth > 0;
         }
     }
 }

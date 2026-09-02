@@ -112,6 +112,24 @@ public static class Vocabulary
             ? word
             : activityType ?? string.Empty;
 
+    private static readonly Dictionary<string, string> AlarmTypes =
+        new(System.StringComparer.Ordinal)
+        {
+            ["OverdueItem"] = "Overdue item",
+            ["CabinetOffline"] = "Cabinet not answering",
+            ["UnauthorizedRemoval"] = "Unauthorised removal",
+            ["PositionFault"] = "Position fault",
+            ["UncollectedRelease"] = "Released, not collected",
+        };
+
+    /// <summary>What an alarm is called on screen.</summary>
+    /// <param name="alarmType">The model's alarm type name.</param>
+    /// <returns>The operator-facing phrase.</returns>
+    public static string AlarmWord(string? alarmType) =>
+        alarmType is not null && AlarmTypes.TryGetValue(alarmType, out var word)
+            ? word
+            : alarmType ?? string.Empty;
+
     /// <summary>Whether an activity type represents a refusal, which the list marks.</summary>
     /// <param name="activityType">The model's event type name.</param>
     /// <returns><see langword="true"/> for a refusal or a fault.</returns>

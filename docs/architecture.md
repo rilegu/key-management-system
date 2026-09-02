@@ -168,6 +168,32 @@ A position that empties with no release behind it is not a checkout. Custody bec
 and an alarm is recorded, because the alternative is a trail that shows someone taking a key
 they never asked for.
 
+## What time does on its own
+
+Two things go wrong through the passage of time rather than through anyone acting: an item held
+past its curfew, and a position released that nobody ever emptied. Neither produces an event, so
+a sweep goes looking, on a timer, walking only what is currently out.
+
+An uncollected release is closed and the item goes back on the board. Leaving it released would
+block it forever on the strength of a request nobody followed through.
+
+## Alarms
+
+Distinct from the audit trail. The trail says what happened; an alarm says something is wrong and
+stays visible until a person says they have seen it. Everything raised is also audited, so the
+trail remains the complete account and the alarm list stays short enough to be read.
+
+Five sources: an overdue item, a cabinet that stopped answering, a position emptying with no
+release behind it, a position fault, and a release nobody collected.
+
+**A problem raises one alarm, not one per check.** Each carries a scope identifying the
+underlying problem, and the database refuses a second active alarm with the same one. A sweep
+every thirty seconds would otherwise add a row every thirty seconds, and a list that grows on its
+own is a list nobody reads.
+
+Acknowledging records who and when, and never clears it. An alarm that was dismissed is a fact
+about a person as much as about the alarm.
+
 ## Reliability
 
 The device link is the unreliable part, and three mechanics carry it:

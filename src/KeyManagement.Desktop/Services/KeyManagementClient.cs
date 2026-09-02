@@ -132,13 +132,133 @@ public sealed class KeyManagementClient : IKeyManagementClient, IDisposable
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<HolderSummary>> ListHoldersAsync(
+        CancellationToken cancellationToken = default) =>
+        await GetAsync<List<HolderSummary>>("/api/users", cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<RoleSummary>> ListRolesAsync(
+        CancellationToken cancellationToken = default) =>
+        await GetAsync<List<RoleSummary>>("/api/roles", cancellationToken).ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AssetGroupSummary>> ListGroupsAsync(
+        CancellationToken cancellationToken = default) =>
+        await GetAsync<List<AssetGroupSummary>>("/api/asset-groups", cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public Task<CommandResult> CreateHolderAsync(
+        CreateHolderRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync("/api/users", request, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<CommandResult> AmendHolderAsync(
+        Guid holderId,
+        AmendHolderRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var path = string.Format(CultureInfo.InvariantCulture, "/api/users/{0}", holderId);
+        var response = await SendAsync(
+                () => _http.PatchAsJsonAsync(path, request, Json, cancellationToken))
+            .ConfigureAwait(false);
+
+        return await ReadAsync<CommandResult>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task<CommandResult> SetHolderGroupAsync(
+        Guid holderId,
+        GrantRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync(
+            string.Format(CultureInfo.InvariantCulture, "/api/users/{0}/groups", holderId),
+            request,
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task<CommandResult> CreateGroupAsync(
+        CreateGroupRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync("/api/asset-groups", request, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<CommandResult> CreateItemAsync(
+        CreateItemRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostAsync("/api/assets", request, cancellationToken);
+
+    private async Task<CommandResult> PostAsync<T>(
+        string path,
+        T body,
+        CancellationToken cancellationToken)
+    {
+        var response = await SendAsync(
+                () => _http.PostAsJsonAsync(path, body, Json, cancellationToken))
+            .ConfigureAwait(false);
+
+        return await ReadAsync<CommandResult>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<AlarmSummary>> ListAlarmsAsync(
+        bool activeOnly = true,
+        CancellationToken cancellationToken = default) =>
+        await GetAsync<List<AlarmSummary>>(
+                $"/api/alarms?activeOnly={(activeOnly ? "true" : "false")}", cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
+    public async Task<CommandResult> AcknowledgeAlarmAsync(
+        Guid alarmId,
+        CancellationToken cancellationToken = default)
+    {
+        var path = string.Format(
+            CultureInfo.InvariantCulture, "/api/alarms/{0}/acknowledge", alarmId);
+
+        var response = await SendAsync(() => _http.PostAsync(path, content: null, cancellationToken))
+            .ConfigureAwait(false);
+
+        return await ReadAsync<CommandResult>(response, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<string> ExportActivityAsync(
+        AuditQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var response = await SendAsync(
+                () => _http.GetAsync(AuditPath("/api/audit-events/export", query), cancellationToken))
+            .ConfigureAwait(false);
+
+        if (response.StatusCode is System.Net.HttpStatusCode.Forbidden)
+        {
+            throw new KeyManagementClientException("You do not have permission to do that.");
+        }
+
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<AuditEventSummary>> SearchActivityAsync(
         AuditQuery query,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var path = new System.Text.StringBuilder("/api/audit-events?take=")
+        return await GetAsync<List<AuditEventSummary>>(
+                AuditPath("/api/audit-events", query), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    // Shared by the search and the export, so what is exported is always what was on screen.
+    private static string AuditPath(string route, AuditQuery query)
+    {
+        var path = new System.Text.StringBuilder(route)
+            .Append("?take=")
             .Append(query.Take.ToString(CultureInfo.InvariantCulture));
 
         if (query.From is { } from)
@@ -156,8 +276,7 @@ public sealed class KeyManagementClient : IKeyManagementClient, IDisposable
             path.Append("&assetId=").Append(assetId.ToString());
         }
 
-        return await GetAsync<List<AuditEventSummary>>(path.ToString(), cancellationToken)
-            .ConfigureAwait(false);
+        return path.ToString();
     }
 
     /// <inheritdoc />
