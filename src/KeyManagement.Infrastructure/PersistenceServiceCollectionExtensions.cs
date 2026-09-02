@@ -1,6 +1,7 @@
 using KeyManagement.Application.Abstractions;
 using KeyManagement.Application.Authentication;
 using KeyManagement.Application.Custody;
+using KeyManagement.Application.Devices;
 using KeyManagement.Infrastructure.Persistence;
 using KeyManagement.Infrastructure.Security;
 using KeyManagement.Infrastructure.Time;
@@ -46,6 +47,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<ICheckoutRepository, CheckoutRepository>();
         services.AddScoped<IRefreshTokenStore, RefreshTokenStore>();
         services.AddScoped<IAuditTrail, AuditTrail>();
+        services.AddScoped<IDeviceEventLog, DeviceEventLog>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ICustodyQueries, CustodyQueries>();
 
@@ -65,10 +67,15 @@ public static class PersistenceServiceCollectionExtensions
 
         services.AddScoped<SignInService>();
         services.AddScoped<CheckoutService>();
+        services.AddScoped<CabinetEventService>();
 
         // Only added if the host has not supplied a real transport, so the server's
         // SignalR publisher wins wherever one is registered.
         services.TryAddSingleton<ICustodyEventPublisher, NullCustodyEventPublisher>();
+
+        // Likewise for the device layer: without a listener every cabinet is unreachable, which
+        // is the truth rather than a stub.
+        services.TryAddSingleton<ICabinetGateway, NullCabinetGateway>();
 
         return services;
     }

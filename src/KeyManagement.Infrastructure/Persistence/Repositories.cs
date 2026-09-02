@@ -67,6 +67,39 @@ public sealed class CabinetRepository : ICabinetRepository
         AssetId assetId,
         CancellationToken cancellationToken = default) =>
         _context.Slots.SingleOrDefaultAsync(s => s.AssetId == assetId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Cabinet?> FindByNameAsync(string name, CancellationToken cancellationToken = default) =>
+        _context.Cabinets.SingleOrDefaultAsync(c => c.Name == name, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Cabinet?> FindWithSlotsAsync(
+        CabinetId cabinetId,
+        CancellationToken cancellationToken = default) =>
+        _context.Cabinets
+            .Include(c => c.Slots)
+            .SingleOrDefaultAsync(c => c.Id == cabinetId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<Slot?> FindSlotAsync(
+        CabinetId cabinetId,
+        string position,
+        CancellationToken cancellationToken = default) =>
+        _context.Slots.SingleOrDefaultAsync(
+            s => s.CabinetId == cabinetId && s.Position == position, cancellationToken);
+}
+
+/// <summary>Keeps what cabinets reported, as reported.</summary>
+public sealed class DeviceEventLog : IDeviceEventLog
+{
+    private readonly KeyManagementDbContext _context;
+
+    /// <summary>Creates the log.</summary>
+    /// <param name="context">The database.</param>
+    public DeviceEventLog(KeyManagementDbContext context) => _context = context;
+
+    /// <inheritdoc />
+    public void Record(DeviceEvent deviceEvent) => _context.DeviceEvents.Add(deviceEvent);
 }
 
 /// <summary>Stores and finds custody requests.</summary>

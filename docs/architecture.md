@@ -147,6 +147,27 @@ Access tokens are short and cannot be revoked. Refresh tokens are the revocable 
 only as a hash, and consumed on use, so a stolen one stops working the moment the rightful
 holder refreshes.
 
+## Closing the custody loop
+
+An authorization is not custody. The two are separated on purpose, and the gateway is what joins
+them:
+
+```
+holder requests  →  server authorizes, records, and only then instructs the cabinet
+                 →  cabinet releases the position and reports it emptied
+                 →  server confirms custody and completes the checkout
+```
+
+Between the second and third steps an item is `CheckoutPending`: released, not yet taken. If the
+cabinet never reports, it stays there — visibly unresolved rather than quietly counted as held.
+
+The server refuses a release outright when the cabinet holding the item is not attached.
+Authorizing one anyway would leave a checkout waiting on a command that was never sent.
+
+A position that empties with no release behind it is not a checkout. Custody becomes `Unknown`
+and an alarm is recorded, because the alternative is a trail that shows someone taking a key
+they never asked for.
+
 ## Reliability
 
 The device link is the unreliable part, and three mechanics carry it:

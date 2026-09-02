@@ -1,3 +1,4 @@
+using KeyManagement.Application.Abstractions;
 using KeyManagement.Infrastructure;
 using KeyManagement.Infrastructure.Persistence;
 using KeyManagement.Infrastructure.Security;
@@ -51,6 +52,10 @@ public sealed class TemporaryDatabase : IAsyncDisposable
                 // Test-only key. Long enough for HMAC-SHA256 and never used anywhere real.
                 SigningKey = "test-signing-key-that-is-long-enough-for-hmac-sha256",
             });
+
+        // Registered after the use cases, so it wins over the null gateway they fall back to.
+        services.AddSingleton<AttachedCabinetGateway>();
+        services.AddSingleton<ICabinetGateway>(s => s.GetRequiredService<AttachedCabinetGateway>());
 
         var provider = services.BuildServiceProvider();
 

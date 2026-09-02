@@ -33,13 +33,16 @@ public sealed class DatabaseSeeder
     /// Seeds an empty database. Does nothing if any holder already exists.
     /// </summary>
     /// <param name="administratorPassword">Initial password for the administrator account.</param>
+    /// <param name="cabinetCredential">Secret the seeded cabinet presents when it attaches.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>Whether anything was written.</returns>
     public async Task<bool> SeedAsync(
         string administratorPassword,
+        string cabinetCredential,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(administratorPassword);
+        ArgumentException.ThrowIfNullOrWhiteSpace(cabinetCredential);
 
         if (await _context.Users.AnyAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -72,6 +75,11 @@ public sealed class DatabaseSeeder
         _context.Assets.AddRange(assets);
 
         var cabinet = new Cabinet("Reception", "Main building, ground floor");
+
+        // The same secret the cabinet presents when it attaches. Stored hashed; the plaintext
+        // is configuration, and a deployment that leaves it at the default gets a cabinet
+        // anyone on the network can impersonate.
+        cabinet.SetCredential(_passwordHasher.Hash(cabinetCredential));
         for (var position = 1; position <= 10; position++)
         {
             var slot = cabinet.AddSlot($"A{position:D2}");

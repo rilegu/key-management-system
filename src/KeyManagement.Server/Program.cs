@@ -4,6 +4,7 @@ using KeyManagement.Infrastructure;
 using KeyManagement.Infrastructure.Persistence;
 using KeyManagement.Infrastructure.Security;
 using KeyManagement.Server;
+using KeyManagement.Server.Devices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -59,6 +60,15 @@ foreach (var permission in Authorization.All)
         .RequireClaim(JwtTokenIssuer.PermissionClaimType, permission));
 }
 
+var gateway = builder.Configuration.GetSection(DeviceGatewayOptions.SectionName)
+    .Get<DeviceGatewayOptions>() ?? new DeviceGatewayOptions();
+
+builder.Services.AddSingleton(gateway);
+builder.Services.AddSingleton<CabinetRegistry>();
+builder.Services.AddSingleton<ICabinetGateway>(s => s.GetRequiredService<CabinetRegistry>());
+builder.Services.AddSingleton<DeviceGatewayService>();
+builder.Services.AddHostedService(s => s.GetRequiredService<DeviceGatewayService>());
+
 builder.Services.AddSignalR();
 builder.Services.AddScoped<ICustodyEventPublisher, SignalRCustodyEventPublisher>();
 builder.Services.AddOpenApi();
@@ -75,7 +85,9 @@ await using (var scope = app.Services.CreateAsyncScope())
     var initialPassword = builder.Configuration["Seed:AdministratorPassword"];
     if (!string.IsNullOrWhiteSpace(initialPassword))
     {
-        await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync(initialPassword);
+        var cabinetCredential = builder.Configuration["Seed:CabinetCredential"] ?? initialPassword;
+        await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>()
+            .SeedAsync(initialPassword, cabinetCredential);
     }
 }
 

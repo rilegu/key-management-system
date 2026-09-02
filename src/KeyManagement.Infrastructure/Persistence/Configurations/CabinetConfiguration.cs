@@ -20,6 +20,7 @@ public sealed class CabinetConfiguration : IEntityTypeConfiguration<Cabinet>
         builder.Property(c => c.Site).HasMaxLength(128).IsRequired();
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(c => c.FirmwareVersion).HasMaxLength(64);
+        builder.Property(c => c.CredentialHash).HasMaxLength(256);
         builder.Property(c => c.LastAppliedSequence).IsRequired();
 
         builder.HasIndex(c => c.Name).IsUnique();

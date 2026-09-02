@@ -23,7 +23,7 @@ public sealed class CustodyQueriesTests
         var database = await TemporaryDatabase.CreateAsync();
 
         await using var scope = database.CreateScope();
-        await TemporaryDatabase.Resolve<DatabaseSeeder>(scope).SeedAsync("correct horse battery staple");
+        await TemporaryDatabase.Resolve<DatabaseSeeder>(scope).SeedAsync("correct horse battery staple", "cabinet-secret");
 
         return database;
     }

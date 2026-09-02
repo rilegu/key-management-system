@@ -1,6 +1,7 @@
 # Cabinet protocol
 
-**Status: specification. Not implemented yet** — see the capability table in the README.
+**Status: implemented.** The codec, the handshake, sequencing and the gateway are built and
+tested. The link is plaintext; see Authentication at the end.
 
 The link between the server and a cabinet. Original to this project; it is not compatible with
 any commercial cabinet and does not attempt to be.
@@ -45,7 +46,7 @@ encoding stays available behind the same codec interface if that ever stops bein
 | `Heartbeat` | cabinet → server | Liveness, every 5 s |
 | `Ping` | server → cabinet | Liveness probe from the other direction |
 | `SlotStateChanged` | cabinet → server | A key was inserted, removed, or a slot faulted |
-| `CommandResult` | cabinet → server | Outcome of a command, echoing its correlation id |
+| `CommandOutcome` | cabinet → server | Outcome of a command, echoing its correlation id |
 | `EventBatch` | cabinet → server | Buffered events replayed after a reconnect |
 | `UnlockSlot` | server → cabinet | Release the asset in a slot, carrying a correlation id |
 | `RequestSnapshot` | server → cabinet | Report the state of every slot |
@@ -70,7 +71,7 @@ cabinet                                    server
 records the highest applied and discards anything at or below it. This is what makes duplicate
 and out-of-order delivery harmless: the same event applied twice is applied once.
 
-**Correlation ids** are per command, assigned by the server, and echoed in `CommandResult`. A
+**Correlation ids** are per command, assigned by the server, and echoed in `CommandOutcome`. A
 command retried after a timeout carries the same id, so the cabinet can recognise it and the
 server can match a late result to the request that caused it.
 
