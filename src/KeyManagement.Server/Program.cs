@@ -63,6 +63,19 @@ foreach (var permission in Authorization.All)
 var gateway = builder.Configuration.GetSection(DeviceGatewayOptions.SectionName)
     .Get<DeviceGatewayOptions>() ?? new DeviceGatewayOptions();
 
+var certificates = builder.Configuration.GetSection(DeviceCertificateOptions.SectionName)
+    .Get<DeviceCertificateOptions>() ?? new DeviceCertificateOptions();
+
+// The device authority protects the key that lets a new cabinet be enrolled. As with the
+// signing key, there is no built-in default: one would be the same key everywhere.
+if (gateway.Enabled && string.IsNullOrWhiteSpace(certificates.Password))
+{
+    throw new InvalidOperationException(
+        $"Configure {DeviceCertificateOptions.SectionName}:Password before enabling the device gateway. " +
+        "Use user-secrets in development and an environment variable in deployment; never commit it.");
+}
+
+builder.Services.AddSingleton(certificates);
 builder.Services.AddSingleton(gateway);
 builder.Services.AddSingleton<CabinetRegistry>();
 builder.Services.AddSingleton<ICabinetGateway>(s => s.GetRequiredService<CabinetRegistry>());
@@ -85,10 +98,25 @@ await using (var scope = app.Services.CreateAsyncScope())
     var initialPassword = builder.Configuration["Seed:AdministratorPassword"];
     if (!string.IsNullOrWhiteSpace(initialPassword))
     {
-        var cabinetCredential = builder.Configuration["Seed:CabinetCredential"] ?? initialPassword;
+        var administratorPin = builder.Configuration["Seed:AdministratorPin"] ?? "1234";
         await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>()
-            .SeedAsync(initialPassword, cabinetCredential);
+            .SeedAsync(initialPassword, administratorPin);
     }
+}
+
+// Enrolment is a one-off act by a person installing a cabinet, so it runs and exits rather
+// than starting a server nobody asked for.
+if (args is ["--issue-cabinet-certificate", var cabinetToEnrol, ..])
+{
+    await using var enrolmentScope = app.Services.CreateAsyncScope();
+    var enrolment = enrolmentScope.ServiceProvider.GetRequiredService<CabinetEnrolment>();
+    var (issuedPath, issuedThumbprint) = await enrolment.IssueAsync(cabinetToEnrol);
+
+    Console.WriteLine($"Issued a certificate for '{cabinetToEnrol}'.");
+    Console.WriteLine($"  File:        {issuedPath}");
+    Console.WriteLine($"  Fingerprint: {issuedThumbprint}");
+    Console.WriteLine("Copy the file to the cabinet. It is the only thing that can now attach under that name.");
+    return;
 }
 
 if (app.Environment.IsDevelopment())

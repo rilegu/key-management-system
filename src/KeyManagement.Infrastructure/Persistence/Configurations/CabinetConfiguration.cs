@@ -20,7 +20,14 @@ public sealed class CabinetConfiguration : IEntityTypeConfiguration<Cabinet>
         builder.Property(c => c.Site).HasMaxLength(128).IsRequired();
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(c => c.FirmwareVersion).HasMaxLength(64);
-        builder.Property(c => c.CredentialHash).HasMaxLength(256);
+        builder.Property(c => c.CertificateThumbprint).HasMaxLength(128);
+
+        // Two cabinets cannot share a certificate. Filtered, because most cabinets are enrolled
+        // some time after they are created and SQLite would otherwise treat every unenrolled
+        // one as a duplicate of the others.
+        builder.HasIndex(c => c.CertificateThumbprint)
+            .IsUnique()
+            .HasFilter("[CertificateThumbprint] IS NOT NULL");
         builder.Property(c => c.LastAppliedSequence).IsRequired();
 
         builder.HasIndex(c => c.Name).IsUnique();

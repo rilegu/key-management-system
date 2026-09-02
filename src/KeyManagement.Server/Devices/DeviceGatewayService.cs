@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
+using KeyManagement.Application.Abstractions;
+using KeyManagement.Infrastructure.Security;
 
 namespace KeyManagement.Server.Devices;
 
@@ -23,22 +26,30 @@ public sealed class DeviceGatewayService : BackgroundService
     private readonly IServiceScopeFactory _scopes;
     private readonly CabinetRegistry _registry;
     private readonly ILogger<DeviceGatewayService> _logger;
+    private readonly DeviceCertificateOptions _certificates;
+    private readonly IClock _clock;
 
     /// <summary>Creates the listener.</summary>
     /// <param name="options">Where to listen and how patient to be.</param>
     /// <param name="scopes">Creates a scope per message.</param>
     /// <param name="registry">Where attached cabinets are recorded.</param>
     /// <param name="logger">Records what the gateway is doing.</param>
+    /// <param name="certificates">Where the authority and the gateway certificate live.</param>
+    /// <param name="clock">The current time, for certificate validity.</param>
     public DeviceGatewayService(
         DeviceGatewayOptions options,
         IServiceScopeFactory scopes,
         CabinetRegistry registry,
-        ILogger<DeviceGatewayService> logger)
+        ILogger<DeviceGatewayService> logger,
+        DeviceCertificateOptions certificates,
+        IClock clock)
     {
         _options = options;
         _scopes = scopes;
         _registry = registry;
         _logger = logger;
+        _certificates = certificates;
+        _clock = clock;
     }
 
     /// <summary>The port actually bound, which differs from the configured one when it was zero.</summary>
@@ -54,6 +65,16 @@ public sealed class DeviceGatewayService : BackgroundService
             return;
         }
 
+        // Created before the listener opens. A gateway that cannot prove who it is should not
+        // be accepting connections at all.
+        using var scope = _scopes.CreateScope();
+        var enrolment = scope.ServiceProvider.GetRequiredService<CabinetEnrolment>();
+        using var authority = enrolment.EnsureAuthority();
+        using var gatewayCertificate = CabinetCertificates.Load(
+            _certificates.GatewayPath, _certificates.Password);
+
+        var tls = new DeviceTlsHandshake(gatewayCertificate, authority, _clock);
+
         var listener = new TcpListener(IPAddress.Parse(_options.BindAddress), _options.Port);
         listener.Start();
         BoundPort = ((IPEndPoint)listener.LocalEndpoint).Port;
@@ -67,7 +88,7 @@ public sealed class DeviceGatewayService : BackgroundService
 
                 // Each connection runs on its own. One cabinet misbehaving must not stop the
                 // listener from accepting the others.
-                _ = ServeAsync(client, stoppingToken);
+                _ = ServeAsync(client, tls, stoppingToken);
             }
         }
         catch (OperationCanceledException)
@@ -80,21 +101,44 @@ public sealed class DeviceGatewayService : BackgroundService
         }
     }
 
-    private async Task ServeAsync(TcpClient client, CancellationToken stoppingToken)
+    private async Task ServeAsync(
+        TcpClient client,
+        DeviceTlsHandshake tls,
+        CancellationToken stoppingToken)
     {
         // Nagle's algorithm holds small writes back waiting for company. Every frame here is
         // small and every one of them is wanted immediately.
         client.NoDelay = true;
 
-        var session = new CabinetSession(
-            client.GetStream(), _scopes, _options, _registry, _logger);
-
         try
         {
-            await using (session.ConfigureAwait(false))
+            var (stream, certificate) = await tls
+                .AuthenticateAsync(client.GetStream(), _options.TlsHandshakeTimeout, stoppingToken)
+                .ConfigureAwait(false);
+
+            using (certificate)
             {
-                await session.RunAsync(stoppingToken).ConfigureAwait(false);
+                var session = new CabinetSession(
+                    stream,
+                    _scopes,
+                    _options,
+                    _registry,
+                    _logger,
+                    CabinetCertificates.ThumbprintOf(certificate),
+                    CabinetCertificates.CommonNameOf(certificate));
+
+                await using (session.ConfigureAwait(false))
+                {
+                    await session.RunAsync(stoppingToken).ConfigureAwait(false);
+                }
             }
+        }
+        catch (Exception exception) when (exception is System.Security.Authentication.AuthenticationException
+                                              or IOException)
+        {
+            // Refused during negotiation: no certificate, the wrong authority, or a plaintext
+            // peer. Nothing was ever read from it, so there is nothing to unwind.
+            Rejected(_logger, exception.Message, null);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -117,6 +161,12 @@ public sealed class DeviceGatewayService : BackgroundService
             LogLevel.Information,
             new EventId(2, nameof(Listening)),
             "The device gateway is listening on {Address}:{Port}.");
+
+    private static readonly Action<ILogger, string, Exception?> Rejected =
+        LoggerMessage.Define<string>(
+            LogLevel.Warning,
+            new EventId(4, nameof(Rejected)),
+            "Refused a connection during TLS negotiation: {Detail}");
 
     private static readonly Action<ILogger, Exception?> SessionFailed =
         LoggerMessage.Define(

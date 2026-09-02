@@ -52,6 +52,7 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<ICustodyQueries, CustodyQueries>();
 
         services.AddScoped<DatabaseSeeder>();
+        services.AddScoped<CabinetEnrolment>();
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<IClock, SystemClock>();
 

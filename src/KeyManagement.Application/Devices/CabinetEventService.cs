@@ -1,5 +1,7 @@
 using System.Globalization;
 using KeyManagement.Application.Abstractions;
+using KeyManagement.Application.Custody;
+using KeyManagement.Contracts;
 using KeyManagement.Domain;
 using KeyManagement.Domain.Assets;
 using KeyManagement.Domain.Auditing;
@@ -26,6 +28,7 @@ namespace KeyManagement.Application.Devices;
 public sealed class CabinetEventService
 {
     private readonly ICabinetRepository _cabinets;
+    private readonly IUserRepository _users;
     private readonly IAssetRepository _assets;
     private readonly ICheckoutRepository _checkouts;
     private readonly IDeviceEventLog _deviceEvents;
@@ -36,6 +39,7 @@ public sealed class CabinetEventService
 
     /// <summary>Creates the service.</summary>
     /// <param name="cabinets">Cabinets and positions.</param>
+    /// <param name="users">Holders, for verifying a PIN entered at a keypad.</param>
     /// <param name="assets">Items.</param>
     /// <param name="checkouts">Custody requests.</param>
     /// <param name="deviceEvents">What the cabinet said, as it said it.</param>
@@ -45,6 +49,7 @@ public sealed class CabinetEventService
     /// <param name="clock">The current time.</param>
     public CabinetEventService(
         ICabinetRepository cabinets,
+        IUserRepository users,
         IAssetRepository assets,
         ICheckoutRepository checkouts,
         IDeviceEventLog deviceEvents,
@@ -54,6 +59,7 @@ public sealed class CabinetEventService
         IClock clock)
     {
         _cabinets = cabinets;
+        _users = users;
         _assets = assets;
         _checkouts = checkouts;
         _deviceEvents = deviceEvents;
@@ -64,20 +70,29 @@ public sealed class CabinetEventService
     }
 
     /// <summary>Decides whether a cabinet may attach, and what it should replay.</summary>
-    /// <param name="cabinetName">The name it presents.</param>
-    /// <param name="credential">The secret it presents.</param>
+    /// <param name="cabinetName">The name it claims in its handshake.</param>
+    /// <param name="certificateThumbprint">Fingerprint of the certificate it actually presented.</param>
+    /// <param name="certificateCommonName">The name that certificate was issued to.</param>
     /// <param name="firmwareVersion">What it says it is running.</param>
     /// <param name="protocolVersion">The wire version it speaks.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>Acceptance and the sequence to resume from, or a refusal.</returns>
     /// <remarks>
-    /// An unknown cabinet and a wrong credential are refused identically, for the same reason a
-    /// wrong password and an unknown account are: the answer should not tell a guesser which
-    /// half they got right.
+    /// <para>
+    /// Three things must agree: the cabinet exists, the certificate it presented is the one that
+    /// cabinet was enrolled with, and the name it claims matches the name on that certificate.
+    /// The last check is what stops a cabinet with a perfectly valid certificate of its own from
+    /// attaching as a different one.
+    /// </para>
+    /// <para>
+    /// Every refusal reads the same, for the same reason a wrong password and an unknown account
+    /// do: the answer should not tell a guesser which part they got right.
+    /// </para>
     /// </remarks>
     public async Task<CabinetAttachment> AttachAsync(
         string cabinetName,
-        string credential,
+        string certificateThumbprint,
+        string certificateCommonName,
         string firmwareVersion,
         int protocolVersion,
         CancellationToken cancellationToken = default)
@@ -91,11 +106,13 @@ public sealed class CabinetEventService
         var cabinet = await _cabinets.FindByNameAsync(cabinetName, cancellationToken)
             .ConfigureAwait(false);
 
-        if (cabinet?.CredentialHash is null
-            || string.IsNullOrEmpty(credential)
-            || _passwordHasher.Verify(cabinet.CredentialHash, credential) == PasswordVerification.Failed)
+        if (cabinet?.CertificateThumbprint is null
+            || string.IsNullOrEmpty(certificateThumbprint)
+            || !string.Equals(
+                cabinet.CertificateThumbprint, certificateThumbprint, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(cabinetName, certificateCommonName, StringComparison.Ordinal))
         {
-            return CabinetAttachment.Refused("The cabinet name or credential is not correct.");
+            return CabinetAttachment.Refused("This cabinet is not enrolled with that certificate.");
         }
 
         var now = _clock.UtcNow;
@@ -205,8 +222,76 @@ public sealed class CabinetEventService
         }, cancellationToken);
     }
 
+    /// <summary>
+    /// Judges a request typed at a cabinet keypad.
+    /// </summary>
+    /// <param name="cabinetId">The cabinet the request came from.</param>
+    /// <param name="position">The position wanted.</param>
+    /// <param name="userName">Who the person says they are.</param>
+    /// <param name="pin">The PIN they entered.</param>
+    /// <param name="correlationId">Ties the request to its answer and its audit records.</param>
+    /// <param name="checkouts">The same custody service a workstation request goes through.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>Whether the item is released, and a line for the cabinet display.</returns>
+    /// <remarks>
+    /// <para>
+    /// The keypad only establishes who is standing there. Everything after that is
+    /// <see cref="CheckoutService"/>, unchanged and unaware of where the request came from, so a
+    /// holder gets the same answer at a cabinet as at a desk. Any other arrangement would mean
+    /// two sets of authorization rules that have to be kept in step.
+    /// </para>
+    /// <para>
+    /// A PIN is a second factor at a physical door, not a password. It is short by nature, which
+    /// is why it is checked here against a hash and why a wrong one is audited.
+    /// </para>
+    /// </remarks>
+    public async Task<(bool Granted, string Message)> RequestAtCabinetAsync(
+        CabinetId cabinetId,
+        string position,
+        string userName,
+        string pin,
+        CorrelationId correlationId,
+        CheckoutService checkouts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(checkouts);
+
+        var now = _clock.UtcNow;
+        var user = await _users.FindByUserNameAsync(userName, cancellationToken).ConfigureAwait(false);
+
+        if (user?.PinHash is null
+            || string.IsNullOrEmpty(pin)
+            || _passwordHasher.Verify(user.PinHash, pin) == PasswordVerification.Failed)
+        {
+            _audit.Record(new AuditEvent(
+                    AuditEventType.SignInFailed,
+                    now,
+                    correlationId,
+                    $"PIN refused at {position} for '{userName}'.")
+                .About(cabinetId));
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            return (false, "That user name or PIN is not correct.");
+        }
+
+        var slot = await _cabinets.FindSlotAsync(cabinetId, position, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (slot?.AssetId is not { } assetId)
+        {
+            return (false, "There is nothing assigned to that position.");
+        }
+
+        var result = await checkouts
+            .RequestAsync(new CheckoutRequest(assetId.Value, null), user.Id, correlationId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return (result.Success, result.Message);
+    }
+
     /// <summary>The wire version this build accepts.</summary>
-    public static int ProtocolVersion => 1;
+    public static int ProtocolVersion => 2;
 
     private static DeviceEvent Received(
         CabinetId cabinetId,

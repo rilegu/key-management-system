@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Copied beside the executable so the simulator runs from its output directory. -->
+    <None Update="simulator.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\KeyManagement.Devices.Protocol\KeyManagement.Devices.Protocol.csproj" />
   </ItemGroup>
 

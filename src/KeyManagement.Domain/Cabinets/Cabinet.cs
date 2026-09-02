@@ -50,14 +50,15 @@ public sealed class Cabinet
     public string? FirmwareVersion { get; private set; }
 
     /// <summary>
-    /// Hash of the secret the cabinet presents when it attaches.
+    /// Fingerprint of the certificate this cabinet must present.
     /// </summary>
     /// <remarks>
-    /// Hashed, so a stolen database yields no working credential. A shared secret is weaker
-    /// than a client certificate and is recorded as a known limitation until mutual TLS
-    /// replaces it; what it does buy is that an arbitrary process cannot attach as a cabinet.
+    /// The cabinet's identity, and the only thing that decides which cabinet a connection is.
+    /// A fingerprint is not a secret: it identifies a key rather than being one, so a stolen
+    /// database yields nothing an attacker can present. Only the matching private key, which
+    /// never leaves the cabinet, can complete the handshake.
     /// </remarks>
-    public string? CredentialHash { get; private set; }
+    public string? CertificateThumbprint { get; private set; }
 
     /// <summary>
     /// The highest event sequence number applied from this cabinet.
@@ -84,12 +85,17 @@ public sealed class Cabinet
         return slot;
     }
 
-    /// <summary>Sets the secret this cabinet must present.</summary>
-    /// <param name="credentialHash">Already hashed. This type never sees the secret itself.</param>
-    public void SetCredential(string credentialHash)
+    /// <summary>Enrols the certificate this cabinet must present.</summary>
+    /// <param name="thumbprint">Fingerprint of the issued certificate.</param>
+    /// <remarks>
+    /// Enrolling a different fingerprint is how a cabinet is re-keyed or replaced. The previous
+    /// certificate stops working the moment this changes, which is the whole point of holding
+    /// identity here rather than in the certificate alone.
+    /// </remarks>
+    public void EnrolCertificate(string thumbprint)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(credentialHash);
-        CredentialHash = credentialHash;
+        ArgumentException.ThrowIfNullOrWhiteSpace(thumbprint);
+        CertificateThumbprint = thumbprint;
     }
 
     /// <summary>Records a successful handshake.</summary>

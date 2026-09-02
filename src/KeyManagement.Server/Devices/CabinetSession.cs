@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KeyManagement.Application.Custody;
 using KeyManagement.Application.Devices;
 using KeyManagement.Devices.Protocol;
 using KeyManagement.Domain;
@@ -28,6 +29,8 @@ public sealed class CabinetSession : IAsyncDisposable
     private readonly DeviceGatewayOptions _options;
     private readonly CabinetRegistry _registry;
     private readonly ILogger _logger;
+    private readonly string _certificateThumbprint;
+    private readonly string _certificateCommonName;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     /// <summary>Creates a session over an accepted connection.</summary>
@@ -36,18 +39,24 @@ public sealed class CabinetSession : IAsyncDisposable
     /// <param name="options">Timings.</param>
     /// <param name="registry">Where this session registers itself once identified.</param>
     /// <param name="logger">Records what the cabinet did.</param>
+    /// <param name="certificateThumbprint">Fingerprint of the certificate that authenticated this connection.</param>
+    /// <param name="certificateCommonName">The name that certificate was issued to.</param>
     public CabinetSession(
         Stream stream,
         IServiceScopeFactory scopes,
         DeviceGatewayOptions options,
         CabinetRegistry registry,
-        ILogger logger)
+        ILogger logger,
+        string certificateThumbprint,
+        string certificateCommonName)
     {
         _stream = stream;
         _scopes = scopes;
         _options = options;
         _registry = registry;
         _logger = logger;
+        _certificateThumbprint = certificateThumbprint;
+        _certificateCommonName = certificateCommonName;
     }
 
     /// <summary>Which cabinet this is, once the handshake has succeeded.</summary>
@@ -136,8 +145,16 @@ public sealed class CabinetSession : IAsyncDisposable
         await using var scope = _scopes.CreateAsyncScope();
         var events = scope.ServiceProvider.GetRequiredService<CabinetEventService>();
 
+        // The name in Hello is a claim. What the connection actually proved is the certificate,
+        // so both go to the service and it insists they agree.
         var attachment = await events
-            .AttachAsync(hello.CabinetName, hello.Credential, hello.FirmwareVersion, hello.ProtocolVersion, cancellationToken)
+            .AttachAsync(
+                hello.CabinetName,
+                _certificateThumbprint,
+                _certificateCommonName,
+                hello.FirmwareVersion,
+                hello.ProtocolVersion,
+                cancellationToken)
             .ConfigureAwait(false);
 
         if (!attachment.Accepted)
@@ -232,6 +249,11 @@ public sealed class CabinetSession : IAsyncDisposable
 
                 break;
 
+            case MessageType.AccessRequest:
+                await AnswerKeypadAsync(FrameCodec.Decode<AccessRequest>(frame), cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+
             case MessageType.CommandOutcome:
                 var result = FrameCodec.Decode<CommandOutcome>(frame);
                 if (!result.Success)
@@ -271,6 +293,33 @@ public sealed class CabinetSession : IAsyncDisposable
         {
             Unauthorized(_logger, change.Position, null);
         }
+    }
+
+    private async Task AnswerKeypadAsync(AccessRequest request, CancellationToken cancellationToken)
+    {
+        await using var scope = _scopes.CreateAsyncScope();
+        var events = scope.ServiceProvider.GetRequiredService<CabinetEventService>();
+        var checkouts = scope.ServiceProvider.GetRequiredService<CheckoutService>();
+
+        var (granted, message) = await events
+            .RequestAtCabinetAsync(
+                CabinetId,
+                request.Position,
+                request.UserName,
+                request.Pin,
+                new CorrelationId(request.CorrelationId),
+                checkouts,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        // Only the answer goes back on this path. When it is granted, the release has already
+        // gone out as an UnlockSlot from the registry — dispatched by the custody service
+        // itself, the same way a workstation request is — so the cabinet sees the unlock first
+        // and this second. A position is never opened by a second route.
+        await SendAsync(
+            MessageType.AccessResult,
+            new AccessResult(request.CorrelationId, granted, message),
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task MarkOfflineAsync()

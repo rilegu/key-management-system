@@ -1,7 +1,7 @@
 # Cabinet protocol
 
-**Status: implemented.** The codec, the handshake, sequencing and the gateway are built and
-tested. The link is plaintext; see Authentication at the end.
+**Status: implemented.** The codec, the handshake, sequencing, the gateway and mutual TLS are
+built and tested. Wire version 2.
 
 The link between the server and a cabinet. Original to this project; it is not compatible with
 any commercial cabinet and does not attempt to be.
@@ -96,7 +96,21 @@ assumed `Available`.
 
 ## Authentication
 
-Cabinets present a per-cabinet credential in `Hello`. **The link is plaintext and the
-credential is a shared secret until the transport-security sprint**, at which point TLS with
-mutual certificates replaces both. This is a real weakness and is recorded as one in
-[`threat-model.md`](threat-model.md) rather than described as sufficient.
+The connection is mutually authenticated TLS before a single frame is read. The gateway presents
+its certificate and requires one back; both are validated against this deployment's own device
+authority rather than the machine's trust store, because a cabinet is trusted for having been
+enrolled here and not for anything a public authority says.
+
+`Hello` therefore carries no credential. The name in it is a claim, checked against the common
+name of the certificate that was actually presented and against the fingerprint that cabinet was
+enrolled with. All three must agree.
+
+Enrol a cabinet by issuing it one:
+
+```
+dotnet run --project src/KeyManagement.Server -- --issue-cabinet-certificate Reception
+```
+
+Re-issuing replaces the enrolled fingerprint, which is how a cabinet is re-keyed and how a lost
+certificate is retired. There is no revocation list; [`threat-model.md`](threat-model.md) records
+that as a known limitation.

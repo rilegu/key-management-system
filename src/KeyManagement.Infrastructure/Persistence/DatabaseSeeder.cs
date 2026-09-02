@@ -33,16 +33,16 @@ public sealed class DatabaseSeeder
     /// Seeds an empty database. Does nothing if any holder already exists.
     /// </summary>
     /// <param name="administratorPassword">Initial password for the administrator account.</param>
-    /// <param name="cabinetCredential">Secret the seeded cabinet presents when it attaches.</param>
+    /// <param name="administratorPin">PIN the administrator enters at a cabinet keypad.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>Whether anything was written.</returns>
     public async Task<bool> SeedAsync(
         string administratorPassword,
-        string cabinetCredential,
+        string administratorPin,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(administratorPassword);
-        ArgumentException.ThrowIfNullOrWhiteSpace(cabinetCredential);
+        ArgumentException.ThrowIfNullOrWhiteSpace(administratorPin);
 
         if (await _context.Users.AnyAsync(cancellationToken).ConfigureAwait(false))
         {
@@ -76,10 +76,9 @@ public sealed class DatabaseSeeder
 
         var cabinet = new Cabinet("Reception", "Main building, ground floor");
 
-        // The same secret the cabinet presents when it attaches. Stored hashed; the plaintext
-        // is configuration, and a deployment that leaves it at the default gets a cabinet
-        // anyone on the network can impersonate.
-        cabinet.SetCredential(_passwordHasher.Hash(cabinetCredential));
+        // No certificate is enrolled here. A cabinet is enrolled by issuing it one and
+        // recording the fingerprint, which is a deliberate act by a person rather than
+        // something a seeder should invent.
         for (var position = 1; position <= 10; position++)
         {
             var slot = cabinet.AddSlot($"A{position:D2}");
@@ -95,6 +94,7 @@ public sealed class DatabaseSeeder
         _context.Cabinets.Add(cabinet);
 
         var admin = new User("admin", "Administrator", _passwordHasher.Hash(administratorPassword));
+        admin.SetPinHash(_passwordHasher.Hash(administratorPin));
         admin.Grant(administrator);
         admin.GrantGroup(plantRoom.Id);
         admin.GrantGroup(vehicles.Id);

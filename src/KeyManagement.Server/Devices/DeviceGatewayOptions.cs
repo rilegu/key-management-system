@@ -42,4 +42,12 @@ public sealed class DeviceGatewayOptions
     /// <summary>How long a cabinet may be silent before it is judged offline.</summary>
     public TimeSpan SilenceBeforeOffline =>
         HeartbeatInterval * MissedHeartbeatsBeforeOffline;
+
+    /// <summary>How long the TLS handshake itself may take.</summary>
+    /// <remarks>
+    /// Separate from the protocol handshake, and enforced before a single frame is read. A peer
+    /// that opens a socket and then stalls the negotiation must not be able to hold a
+    /// connection open for free.
+    /// </remarks>
+    public TimeSpan TlsHandshakeTimeout { get; set; } = TimeSpan.FromSeconds(10);
 }
